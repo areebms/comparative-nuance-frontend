@@ -13,53 +13,26 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-/**
- * BookPicker Component
- * Modal dialog for selecting which books to compare
- */
-export default function BookPicker({
-  books,
-  selectedBookIds,
-  onSelectedBookIdsChange,
-  onClose,
-}) {
-  // ============================================================================
-  // Event Handlers
-  // ============================================================================
-
-  /**
-   * Toggle selection of a single book
-   */
+export default function BookPicker({ bookData, setBookData, onClose }) {
   const handleToggleBook = (bookId) => {
-    if (selectedBookIds.includes(bookId)) {
-      // Remove from selection
-      const updatedIds = selectedBookIds.filter((id) => id !== bookId);
-      onSelectedBookIdsChange(updatedIds);
-    } else {
-      // Add to selection
-      const updatedIds = [...selectedBookIds, bookId];
-      onSelectedBookIdsChange(updatedIds);
-    }
+    setBookData((prevBookData) =>
+      prevBookData.map((book) =>
+        book.id === bookId ? { ...book, selected: !book.selected } : book,
+      ),
+    );
   };
 
-  /**
-   * Select all books
-   */
   const handleSelectAll = () => {
-    const allBookIds = books.map((book) => book.id);
-    onSelectedBookIdsChange(allBookIds);
+    setBookData((prevBookData) =>
+      prevBookData.map((book) => ({ ...book, selected: true })),
+    );
   };
 
-  /**
-   * Clear all selections
-   */
   const handleClearAll = () => {
-    onSelectedBookIdsChange([]);
+    setBookData((prevBookData) =>
+      prevBookData.map((book) => ({ ...book, selected: false })),
+    );
   };
-
-  // ============================================================================
-  // Main Render
-  // ============================================================================
 
   return (
     <Dialog
@@ -72,7 +45,13 @@ export default function BookPicker({
       }}
     >
       <DialogTitle>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography variant="h6" fontWeight={700}>
             Select books to compare
           </Typography>
@@ -84,12 +63,12 @@ export default function BookPicker({
 
       <DialogContent dividers sx={{ maxHeight: 400 }}>
         <FormGroup>
-          {books.map((book) => (
+          {bookData.map((book) => (
             <FormControlLabel
               key={book.id}
               control={
                 <Checkbox
-                  checked={selectedBookIds.includes(book.id)}
+                  checked={book.selected || false}
                   onChange={() => handleToggleBook(book.id)}
                 />
               }

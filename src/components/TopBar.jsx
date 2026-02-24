@@ -18,40 +18,21 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import BookPicker from "./BookPicker";
 import { getColorForBook } from "../utils/bookColors";
 
-/**
- * TopBar Component
- * Application header with search term input and book selection controls
- */
 export default function TopBar({
   term,
   onTermChange,
-  books,
-  selectedBookIds,
-  onSelectedBookIdsChange,
+  bookData,
+  setBookData,
   selectedBooks = [],
   selectedBookId,
   setSelectedBookId,
-  rankBy,
-  onRankByChange,
   topN,
   onTopNChange,
 }) {
-  // ============================================================================
-  // State
-  // ============================================================================
-
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  // ============================================================================
-  // Computed Values
-  // ============================================================================
-
-  const selectedCount = selectedBookIds.length;
-  const totalCount = books.length;
-
-  // ============================================================================
-  // Event Handlers
-  // ============================================================================
+  const selectedCount = selectedBooks.length;
+  const totalCount = bookData.length;
 
   const handleTermChange = (event) => {
     onTermChange(event.target.value);
@@ -74,7 +55,9 @@ export default function TopBar({
           size="small"
           clickable
           onClick={() =>
-            selectedBookIds.length > 1 && setSelectedBookId(String(book.id))
+            selectedBookId == String(book.id)
+              ? setSelectedBookId(null)
+              : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
           }
           sx={{
             bgcolor:
@@ -95,10 +78,6 @@ export default function TopBar({
       ))}
     </Box>
   );
-
-  // ============================================================================
-  // Main Render
-  // ============================================================================
 
   return (
     <AppBar
@@ -141,9 +120,8 @@ export default function TopBar({
 
             {isPickerOpen && (
               <BookPicker
-                books={books}
-                selectedBookIds={selectedBookIds}
-                onSelectedBookIdsChange={onSelectedBookIdsChange}
+                bookData={bookData}
+                setBookData={setBookData}
                 onClose={closePicker}
               />
             )}
@@ -160,7 +138,6 @@ export default function TopBar({
             marginLeft: "auto",
           }}
         >
-          {/* Search Box */}
           <TextField
             value={term}
             onChange={handleTermChange}
@@ -181,20 +158,6 @@ export default function TopBar({
             }}
           />
 
-          {/* Ranking selector */}
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Ranked by</InputLabel>
-            <Select
-              value={rankBy}
-              label="Ranked by"
-              onChange={(e) => onRankByChange(e.target.value)}
-            >
-              <MenuItem value="max">Max similarity</MenuItem>
-              <MenuItem value="min">Min similarity</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Top N selector */}
           <FormControl size="small" sx={{ minWidth: 85 }}>
             <InputLabel>Show top</InputLabel>
             <Select
@@ -204,7 +167,6 @@ export default function TopBar({
             >
               <MenuItem value={10}>10</MenuItem>
               <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
             </Select>
           </FormControl>
           <IconButton aria-label="Settings">
