@@ -1,22 +1,63 @@
-import { useState } from "react";
 import {
   AppBar,
   Toolbar,
   TextField,
-  Button,
   Box,
   InputAdornment,
-  IconButton,
   Chip,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Divider
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import SettingsIcon from "@mui/icons-material/Settings";
-import BookPicker from "./BookPicker";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import PushPinIcon from "@mui/icons-material/PushPin";
+
 import { getColorForBook } from "../utils/bookColors";
+
+const BookChip = ({
+  id,
+  label,
+  selected,
+  active,
+  color,
+  onSelect,
+  onClick,
+}) => {
+  const primaryColor = active ? color : "grey";
+  const backgroundColor = active ? "transparent" : "lightgrey";
+
+  return (
+    <Chip
+      key={id}
+      label={label}
+      size="medium"
+      variant="outlined"
+      clickable
+      onClick={onClick}
+      onDelete={onSelect}
+      deleteIcon={selected ? <PushPinIcon /> : <CheckBoxOutlineBlankIcon />}
+      sx={{
+        bgcolor: backgroundColor,
+        color: primaryColor,
+        border: `1px solid ${primaryColor}`,
+        fontWeight: 600,
+        "& .MuiChip-deleteIcon": {
+          color: primaryColor,
+          "&:hover": { color: primaryColor },
+          pointerEvents: active ? "auto" : "none",
+          cursor: active ? "pointer" : "default",
+          opacity: active ? 1 : 0.5,
+        },
+        "& .MuiChip-label": {
+          px: 2,
+        },
+      }}
+    />
+  );
+};
 
 export default function TopBar({
   term,
@@ -29,51 +70,34 @@ export default function TopBar({
   topN,
   onTopNChange,
 }) {
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-
-  const selectedCount = selectedBooks.length;
-  const totalCount = bookData.length;
-
   const handleTermChange = (event) => {
     onTermChange(event.target.value);
   };
 
-  const togglePicker = () => {
-    setIsPickerOpen((isOpen) => !isOpen);
-  };
-
-  const closePicker = () => {
-    setIsPickerOpen(false);
+  const handleToggleBook = (bookId) => {
+    setBookData((prevBookData) => {
+      selectedBookId == String(bookId) && setSelectedBookId(null);
+      return prevBookData.map((book) =>
+        book.id === bookId ? { ...book, displayed: !book.displayed } : book,
+      );
+    });
   };
 
   const renderLegend = () => (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-      {selectedBooks.map((book) => (
-        <Chip
-          key={book.id}
+      {bookData.map((book) => (
+        <BookChip
+          id={book.id}
           label={book.label}
-          size="small"
-          clickable
-          onClick={() =>
+          color={getColorForBook(book.position)}
+          selected={selectedBookId == String(book.id)}
+          active={book.displayed}
+          onClick={() => handleToggleBook(book.id)}
+          onSelect={() =>
             selectedBookId == String(book.id)
               ? setSelectedBookId(null)
               : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
           }
-          sx={{
-            bgcolor:
-              selectedBookId === String(book.id)
-                ? getColorForBook(book.position)
-                : "transparent",
-            color:
-              selectedBookId === String(book.id)
-                ? "#fff"
-                : getColorForBook(book.position),
-            border: `1px solid ${getColorForBook(book.position)}`,
-            fontWeight: 600,
-            "& .MuiChip-label": {
-              px: 2,
-            },
-          }}
         />
       ))}
     </Box>
@@ -105,27 +129,7 @@ export default function TopBar({
           >
             Embedding Analytics
           </Box>
-
-          <Box sx={{ position: "relative" }}>
-            <Button
-              variant="outlined"
-              onClick={togglePicker}
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              Select Books: {selectedCount} / {totalCount}
-            </Button>
-
-            {isPickerOpen && (
-              <BookPicker
-                bookData={bookData}
-                setBookData={setBookData}
-                onClose={closePicker}
-              />
-            )}
-          </Box>
+          <Divider orientation="vertical" flexItem />
 
           {renderLegend()}
         </Box>
@@ -169,9 +173,6 @@ export default function TopBar({
               <MenuItem value={25}>25</MenuItem>
             </Select>
           </FormControl>
-          <IconButton aria-label="Settings">
-            <SettingsIcon />
-          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>

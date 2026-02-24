@@ -62,7 +62,7 @@ export default function App() {
     setBookData((prevBookData) =>
       prevBookData.map((book) => ({
         ...book,
-        selected: true,
+        displayed: true,
       })),
     );
     setCalculatedRowData([]);
@@ -78,7 +78,7 @@ export default function App() {
       books.sort((a, b) => a.id - b.id);
       books.forEach((book, index) => {
         book.position = index;
-        book.selected = true;
+        book.displayed = true;
       });
 
       setBookData(books);
@@ -89,7 +89,7 @@ export default function App() {
   };
 
   /**
-   * Fetch similarity data for selected books when selection changes
+   * Fetch similarity data for displayed books when selection changes
    */
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +99,7 @@ export default function App() {
         setRowsError(null);
 
         const pendingBookIds = bookData
-          .filter((data) => !similarityCache[data.id] && data.selected)
+          .filter((data) => !similarityCache[data.id] && data.displayed)
           .map((data) => data.id);
 
         if (pendingBookIds.length === 0) {
@@ -120,7 +120,7 @@ export default function App() {
       }
     };
 
-    if (bookData.filter((data) => data.selected).length && term) {
+    if (bookData.filter((data) => data.displayed).length && term) {
       loadSimilarityData();
     } else {
       setCalculatedRowData([]);
@@ -174,7 +174,7 @@ export default function App() {
   };
 
   const selectedBooks = useMemo(
-    () => bookData.filter((book) => book.selected),
+    () => bookData.filter((book) => book.displayed),
     [bookData],
   );
 
