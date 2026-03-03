@@ -30,13 +30,13 @@ function BookTooltipContent({ bookId, stats }) {
   );
 }
 
-function ResultsTableHeader({ selectedBooks, calcStats }) {
+function ResultsTableHeader({ selectedBooks, selectedBookId, calcStats }) {
   return (
     <TableHead>
       <TableRow>
         <TableCell width={50} sx={{ fontWeight: 700 }}>#</TableCell>
         <TableCell width={220} sx={{ fontWeight: 700 }}>Term</TableCell>
-        <TableCell width={140} sx={{ fontWeight: 700 }}>Mean Similarity</TableCell>
+        <TableCell width={140} sx={{ fontWeight: 700 }}>{selectedBookId ? "zScore" : "Mean Similarity"}</TableCell>
         
         {selectedBooks.map((book) => (
           <TableCell key={book.id} sx={{ fontWeight: 700 }}>
@@ -94,7 +94,7 @@ function TermRow({ row, index, selectedBooks, onClick }) {
           {row.term}
         </Typography>
       </TableCell>
-      <TableCell>{row.mean.toFixed(3)}</TableCell>
+      <TableCell>{row.sortable.toFixed(3)}</TableCell>
       
       {selectedBooks.map((book) => (
         <BookCell key={book.id} cellData={row.byBook[book.id]} />
@@ -103,11 +103,11 @@ function TermRow({ row, index, selectedBooks, onClick }) {
   );
 }
 
-export default function ResultsTable({ rows, selectedBooks, calcStats, onClick }) {
+export default function ResultsTable({ rows, selectedBooks, calcStats, onClick, selectedBookId }) {
   return (
     <TableContainer>
       <Table sx={{ minWidth: 650 }} size="small">
-        <ResultsTableHeader selectedBooks={selectedBooks} calcStats={calcStats} />
+        <ResultsTableHeader selectedBooks={selectedBooks} selectedBookId={selectedBookId} calcStats={calcStats} />
         <TableBody>
           {rows.map((row, index) => (
             <TermRow

@@ -128,9 +128,6 @@ export default function App() {
     };
   }, [bookData, similarityCache, term]);
 
-  /**
-   * Fetch similarity data for books not in cache
-   */
   const fetchSimilarityData = async (pendingBookIds, cancelled) => {
     try {
       const fetchPromises = pendingBookIds.map(async (bookId) => {
@@ -186,9 +183,6 @@ export default function App() {
       topN
   });
 
-  // ============================================================================
-  // Render
-  // ============================================================================
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -215,6 +209,7 @@ export default function App() {
             <SimilarityScatterChart
               rows={displayRows.slice(1)}
               selectedBooks={selectedBooks}
+              selectedBookId={selectedBookId}
               isLoading={isLoading}
             />
           </Paper>
@@ -223,6 +218,7 @@ export default function App() {
             <ResultsTable
               rows={displayRows}
               selectedBooks={selectedBooks}
+              selectedBookId={selectedBookId}
               calcStats={bookCalculationStats}
               onClick={setTerm}
             />
