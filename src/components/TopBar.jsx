@@ -1,5 +1,6 @@
 import {
   AppBar,
+  Autocomplete,
   Toolbar,
   TextField,
   Box,
@@ -59,6 +60,32 @@ const BookChip = ({
   );
 };
 
+const Legend = ({
+  bookData,
+  handleToggleBook,
+  selectedBooks,
+  selectedBookId,
+  setSelectedBookId,
+}) => (
+  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+    {bookData.map((book) => (
+      <BookChip
+        id={book.id}
+        label={book.label}
+        color={getColorForBook(book.position)}
+        selected={selectedBookId == String(book.id)}
+        active={book.displayed}
+        onClick={() => handleToggleBook(book.id)}
+        onSelect={() =>
+          selectedBookId == String(book.id)
+            ? setSelectedBookId(null)
+            : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
+        }
+      />
+    ))}
+  </Box>
+);
+
 export default function TopBar({
   term,
   onTermChange,
@@ -70,10 +97,6 @@ export default function TopBar({
   topN,
   onTopNChange,
 }) {
-  const handleTermChange = (event) => {
-    onTermChange(event.target.value);
-  };
-
   const handleToggleBook = (bookId) => {
     setBookData((prevBookData) => {
       selectedBookId == String(bookId) && setSelectedBookId(null);
@@ -82,26 +105,6 @@ export default function TopBar({
       );
     });
   };
-
-  const renderLegend = () => (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-      {bookData.map((book) => (
-        <BookChip
-          id={book.id}
-          label={book.label}
-          color={getColorForBook(book.position)}
-          selected={selectedBookId == String(book.id)}
-          active={book.displayed}
-          onClick={() => handleToggleBook(book.id)}
-          onSelect={() =>
-            selectedBookId == String(book.id)
-              ? setSelectedBookId(null)
-              : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
-          }
-        />
-      ))}
-    </Box>
-  );
 
   return (
     <AppBar
@@ -130,8 +133,13 @@ export default function TopBar({
             Embedding Analytics
           </Box>
           <Divider orientation="vertical" flexItem />
-
-          {renderLegend()}
+          <Legend
+            bookData={bookData}
+            handleToggleBook={handleToggleBook}
+            selectedBooks={selectedBooks}
+            selectedBookId={selectedBookId}
+            setSelectedBookId={setSelectedBookId}
+          />
         </Box>
 
         <Box
@@ -142,24 +150,34 @@ export default function TopBar({
             marginLeft: "auto",
           }}
         >
-          <TextField
+          <Autocomplete
+            options={[]}
             value={term}
-            onChange={handleTermChange}
-            placeholder="Term (e.g. market)"
-            size="small"
+            onChange={(_, value) => onTermChange(value ?? "")}
             sx={{
               minWidth: 200,
               "& .MuiOutlinedInput-root": {
                 bgcolor: "background.paper",
               },
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Term (e.g. market)"
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
 
           <FormControl size="small" sx={{ minWidth: 85 }}>
