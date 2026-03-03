@@ -11,6 +11,7 @@ import {
 import TopBar from "./components/TopBar";
 import SimilarityScatterChart from "./components/SimilarityScatterChart";
 import ResultsTable from "./components/ResultsTable";
+import useSimilarityData from "./hooks/useSimilarityData";
 
 const theme = createTheme({
   palette: {
@@ -44,8 +45,6 @@ export default function App() {
 
   // Data state
   const [bookData, setBookData] = useState([]);
-  const [calculatedRowData, setCalculatedRowData] = useState([]);
-  const [bookCalculationStats, setBookCalculationStats] = useState({});
   const [rowsError, setRowsError] = useState(null);
   const [similarityCache, setSimilarityCache] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -65,7 +64,6 @@ export default function App() {
         displayed: true,
       })),
     );
-    setCalculatedRowData([]);
   }, [term]);
 
   const fetchBooks = async () => {
@@ -114,7 +112,6 @@ export default function App() {
         if (!cancelled) {
           console.error("Error loading similarity data:", error);
           setRowsError(error);
-          setCalculatedRowData([]);
           setIsLoading(false);
         }
       }
@@ -123,7 +120,6 @@ export default function App() {
     if (bookData.filter((data) => data.displayed).length && term) {
       loadSimilarityData();
     } else {
-      setCalculatedRowData([]);
       setIsLoading(false);
     }
 
@@ -167,7 +163,6 @@ export default function App() {
       if (!cancelled) {
         console.error("Error fetching missing similarity data:", error);
         setRowsError(error);
-        setCalculatedRowData([]);
         setIsLoading(false);
       }
     }
@@ -183,130 +178,13 @@ export default function App() {
     [selectedBooks],
   );
 
-  // ============================================================================
-  // Data Processing
-  // ============================================================================
-
-  const computeRows = () => {
-    const termDataMap = new Map();
-
-    const getOrCreateTermRow = (term) => {
-      if (!termDataMap.has(term)) {
-        termDataMap.set(term, { term, byBook: {} });
-      }
-      return termDataMap.get(term);
-    };
-
-    for (const bookId of selectedBookIds) {
-      for (const item of similarityCache[bookId] || []) {
-        const row = getOrCreateTermRow(item.term);
-        row.byBook[bookId] = {
-          similarity: Number(item.similarity),
-          n: Number(item.count),
-          coherence: Number(item.coherence) * 100,
-        };
-      }
-    }
-
-    const rows = Array.from(termDataMap.values()).map((row) => {
-      const similarities = Object.entries(row.byBook)
-        .filter(([bookId]) => String(bookId) !== selectedBookId)
-        .map(([, data]) => data.similarity);
-
-      const total = similarities.reduce(
-        (sum, similarity) => sum + similarity,
-        0,
-      );
-      const count = similarities.length;
-
-      return {
-        ...row,
-        mean: count ? total / count : 0,
-      };
-    });
-
-    setCalculatedRowData(rows);
-  };
-
-  useEffect(() => {
-    if (!selectedBookIds.length) {
-      setCalculatedRowData([]);
-      return;
-    }
-
-    const hasAllSimilarityData = selectedBookIds.every(
-      (bookId) => similarityCache[bookId],
-    );
-
-    if (hasAllSimilarityData) {
-      computeRows();
-    }
-  }, [selectedBookId, selectedBookIds, similarityCache]);
-
-  const displayRowsData = useMemo(() => {
-    const bookStats = {};
-    const removedTerms = [];
-    selectedBookIds.forEach((bookId) => {
-      bookStats[bookId] = {
-        total: similarityCache[bookId]?.length ?? 0,
-        removed: 0,
-        shown: topN,
-      };
-    });
-
-    const shouldKeepRow = (row) => {
-      const hasAllBooks = selectedBookIds.every((bookId) => row.byBook[bookId]);
-      const meetsMinCount = selectedBookIds.every(
-        (bookId) => (row.byBook[bookId]?.n ?? 0) >= 10,
-      );
-      return hasAllBooks && meetsMinCount;
-    };
-
-    const sortedRows = calculatedRowData
-      .map((row) => ({
-        ...row,
-        sortable: !selectedBookId
-          ? row.mean
-          : row.mean - row.byBook[selectedBookId]?.similarity,
-      }))
-      .sort((a, b) =>
-        !!!selectedBookId ? b.sortable - a.sortable : a.sortable - b.sortable,
-      );
-
-    const filteredRows = sortedRows.filter((row) => {
-      const shouldKeep = shouldKeepRow(row);
-      if (!shouldKeep) {
-        removedTerms.push(row.term);
-      }
-      return shouldKeep;
-    });
-
-    const filteredSlicedRows = filteredRows.slice(0, topN);
-    const slicedRows = sortedRows.slice(0, topN);
-
-    selectedBookIds.forEach((bookId) => {
-      bookStats[bookId]["removed"] = slicedRows.reduce((count, item) => {
-        if (shouldKeepRow(item)) {
-          return count;
-        }
-        return !item.byBook.bookId ? count + 1 : count;
-      }, 0);
-    });
-
-    return { rows: filteredSlicedRows, stats: bookStats };
-  }, [
-    calculatedRowData,
-    topN,
-    selectedBookId,
-    selectedBookIds,
-    similarityCache,
-  ]);
-
-  useEffect(() => {
-    setBookCalculationStats(displayRowsData.stats);
-  }, [displayRowsData.stats]);
-
-  const displayRows = displayRowsData.rows;
+  
+  const { displayRows, bookCalculationStats } = useSimilarityData({
+      similarityCache,
+      selectedBookIds,
+      selectedBookId,
+      topN
+  });
 
   // ============================================================================
   // Render
