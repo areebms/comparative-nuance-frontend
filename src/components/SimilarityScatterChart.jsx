@@ -31,8 +31,7 @@ ChartJS.register(
 /**
  * Transform rows data into Chart.js dataset format
  */
-function createChartDatasets(rows, selectedBooks) {
-
+function createChartDatasets(rows, selectedBooks, selectedBookId) {
   // Create a dataset for each book
   const datasets = selectedBooks.map((book) => {
     const dataPoints = rows
@@ -43,8 +42,9 @@ function createChartDatasets(rows, selectedBooks) {
         return {
           x: bookData.similarity,
           y: rowIndex,
-          term: row.term,
+          label: `${row.term} - ${book.label}`,
           bookId: book.id,
+          zScore: bookData.zScore,
           n: bookData.n,
           coherence: bookData.coherence,
         };
@@ -56,7 +56,7 @@ function createChartDatasets(rows, selectedBooks) {
       data: dataPoints,
       backgroundColor: getColorForBook(book.position),
       borderColor: getColorForBook(book.position),
-      pointRadius: 6,
+      pointRadius: String(book.id) === selectedBookId ? 6 : 4,
       pointHoverRadius: 8,
       pointBackgroundColor: getColorForBook(book.position),
       pointBorderColor: "#fff",
@@ -103,6 +103,41 @@ function createRangeDatasets(rows, selectedBooks) {
       };
     })
     .filter(Boolean);
+}
+
+/**
+ * Create a scatter dataset for row mean values
+ */
+function createMeanDataset(rows) {
+  const meanPoints = rows
+    .map((row, rowIndex) => {
+      if (typeof row.mean !== "number") {
+        return null;
+      }
+
+      return {
+        x: row.mean,
+        y: rowIndex,
+        term: row.term,
+        std: row.std,
+        isMean: true,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    label: "Mean",
+    data: meanPoints,
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+    pointRadius: 6,
+    pointHoverRadius: 8,
+    pointBackgroundColor: "#111827",
+    pointBorderColor: "#fff",
+    pointBorderWidth: 2,
+    opacity: 1,
+    order: 2,
+  };
 }
 
 /**
@@ -155,11 +190,18 @@ function createChartOptions(rows, selectedBooks) {
         callbacks: {
           label: (context) => {
             const point = context.raw;
+            if (point.isMean) {
+              return [
+                `${point.term} - Overall`,
+                `Mean Similarity: ${point.x.toFixed(3)}`,
+                `Standard Deviation: ${point.std.toFixed(3)}`,
+              ];
+            }
             return [
-              `Term: ${point.term}`,
+              `${point.label}`,
               `Similarity: ${point.x.toFixed(3)}`,
+              `zScore: ${point.zScore.toFixed(3)}`,
               `Occurrence: ${point.n}`,
-              `Coherence: ${point.coherence.toFixed(1)}%`,
             ];
           },
         },
@@ -173,7 +215,7 @@ function createChartOptions(rows, selectedBooks) {
         grace: "5%",
         title: {
           display: true,
-          text: "Similarity",
+          text: "Cosine Similarity",
           font: {
             size: 14,
             weight: 600,
@@ -224,6 +266,7 @@ function createChartOptions(rows, selectedBooks) {
 export default function SimilarityScatterChart({
   rows,
   selectedBooks,
+  selectedBookId,
   isLoading,
 }) {
   // ============================================================================
@@ -232,11 +275,12 @@ export default function SimilarityScatterChart({
 
   const chartData = useMemo(() => {
     const rangeDatasets = createRangeDatasets(rows, selectedBooks);
-    const datasets = createChartDatasets(rows, selectedBooks);
+    const meanDataset = createMeanDataset(rows);
+    const datasets = createChartDatasets(rows, selectedBooks, selectedBookId);
     return {
-      datasets: [...rangeDatasets, ...datasets],
+      datasets: [...rangeDatasets, meanDataset, ...datasets],
     };
-  }, [rows, selectedBooks]);
+  }, [rows, selectedBooks, selectedBookId]);
 
   const chartOptions = useMemo(() => {
     return createChartOptions(rows, selectedBooks);
@@ -270,16 +314,6 @@ export default function SimilarityScatterChart({
     </Box>
   );
 
-  const renderChart = () => (
-    <Box sx={{ height: Math.max(400, rows.length * 12 + 80) }}>
-      <Scatter data={chartData} options={chartOptions} />
-    </Box>
-  );
-
-  // ============================================================================
-  // Main Render
-  // ============================================================================
-
   if (isLoading) {
     return renderLoadingState();
   }
@@ -290,7 +324,9 @@ export default function SimilarityScatterChart({
 
   return (
     <Box>
-      {renderChart()}
+      <Box sx={{ height: Math.max(400, rows.length * 12 + 80) }}>
+        <Scatter data={chartData} options={chartOptions} />
+      </Box>
     </Box>
   );
 }
