@@ -1,13 +1,13 @@
 // src/hooks/useSimilarityData.js
 import { useMemo } from "react";
 
-import { mean, standardDeviation, zScore } from 'simple-statistics'
-
+import { mean, standardDeviation, zScore } from "simple-statistics";
 
 export default function useSimilarityData({
   similarityCache,
   selectedBookIds,
   selectedBookId,
+  sort,
   topN,
 }) {
   return useMemo(() => {
@@ -42,16 +42,17 @@ export default function useSimilarityData({
           termDataMap.set(item.term, {
             term: item.term,
             byBook: {},
-            mean: 0,
-            sortable: 0,
+            mean: null,
+            std: null,
           });
         }
 
         const row = termDataMap.get(item.term);
         row.byBook[bookId] = {
           similarity: Number(item.similarity),
+          zScore: null,
           n: Number(item.count),
-          coherence: Number(item.coherence) * 100,
+          coherence: Number(item.coherence) * 100, // TODO: Add CI
         };
       }
     }
@@ -67,7 +68,9 @@ export default function useSimilarityData({
 
       if (!hasAllBooks || !meetsMinCount) {
         selectedBookIds.forEach((id) => {
-          if (row.byBook[id]) stats[id].removed += 1;
+          if (row.byBook[id]) {
+            stats[id].removed += 1;
+          }
         });
         continue;
       }
@@ -79,10 +82,19 @@ export default function useSimilarityData({
       row.mean = mean(similarities);
       row.std = standardDeviation(similarities);
 
+      selectedBookIds.forEach((id) => {
+        row.byBook[id].zScore = zScore(
+          row.byBook[id].similarity,
+          row.mean,
+          row.std,
+        );
+      });
 
-      row.sortable = !selectedBookId
-        ? row.mean
-        : zScore(row.byBook[selectedBookId]?.similarity, row.mean, row.std);
+      row.sortable = selectedBookId
+        ? row.byBook[selectedBookId]?.zScore
+        : sort == "mean"
+          ? row.mean
+          : (row.std ?? 0);
 
       validRows.push(row);
     }
@@ -92,7 +104,7 @@ export default function useSimilarityData({
 
     return {
       displayRows: validRows.slice(0, topN),
-      calcStats: stats,
+      bookCalculationStats: stats,
     };
-  }, [similarityCache, selectedBookIds, selectedBookId, topN]);
+  }, [similarityCache, selectedBookIds, selectedBookId, sort, topN]);
 }

@@ -67,7 +67,15 @@ const Legend = ({
   selectedBookId,
   setSelectedBookId,
 }) => (
-  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+  <Box
+    sx={{
+      display: "flex",
+      flexWrap: "nowrap",
+      gap: 1,
+      overflowX: "auto",
+      minWidth: 0,
+    }}
+  >
     {bookData.map((book) => (
       <BookChip
         id={book.id}
@@ -96,6 +104,8 @@ export default function TopBar({
   setSelectedBookId,
   topN,
   onTopNChange,
+  sort,
+  onSortChange
 }) {
   const handleToggleBook = (bookId) => {
     setBookData((prevBookData) => {
@@ -118,8 +128,8 @@ export default function TopBar({
         borderColor: "divider",
       }}
     >
-      <Toolbar sx={{ gap: 2, alignItems: "center" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <Toolbar sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0, flexShrink: 0 }}>
           <Box
             component="span"
             sx={{
@@ -133,55 +143,103 @@ export default function TopBar({
             Embedding Analytics
           </Box>
           <Divider orientation="vertical" flexItem />
-          <Legend
-            bookData={bookData}
-            handleToggleBook={handleToggleBook}
-            selectedBooks={selectedBooks}
-            selectedBookId={selectedBookId}
-            setSelectedBookId={setSelectedBookId}
-          />
         </Box>
 
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
+            alignItems: { xs: "flex-start", md: "center" },
+            flexWrap: { xs: "wrap", md: "nowrap" },
             gap: 2,
-            marginLeft: "auto",
+            marginLeft: { xs: 0, md: "auto" },
+            minWidth: 0,
+            flexBasis: { xs: "100%", md: "auto" },
+            width: { xs: "100%", md: "auto" },
           }}
         >
-          <Autocomplete
-            options={[]}
-            value={term}
-            onChange={(_, value) => onTermChange(value ?? "")}
+          <Box
             sx={{
-              minWidth: 200,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "background.paper",
-              },
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              flexWrap: "nowrap",
+              order: { xs: 1, md: 2 },
+              width: { xs: "100%", md: "auto" },
+              minWidth: 0,
+              flexShrink: 0,
             }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Term (e.g. market)"
-                size="small"
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-          />
+          >
+            <Autocomplete
+              options={["Click from Table"]}
+              value={term}
+              // Todo: Fix
+              onChange={(_, value) => onTermChange("market")}
+              sx={{
+                flex: { xs: 1, md: "0 0 220px" },
+                width: { xs: "100%", md: 220 },
+                minWidth: { xs: 0, md: 220 },
+                "& .MuiOutlinedInput-root": {
+                  bgcolor: "background.paper",
+                },
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  freesSolo // TODO: Remove
+                  placeholder="Click from Table"
+                  label="Reference Term"
+                  size="small"
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                      {/*  <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment> */}
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
 
-          <FormControl size="small" sx={{ minWidth: 85 }}>
-            <InputLabel>Show top</InputLabel>
+            <FormControl
+              size="small"
+              sx={{ minWidth: 190, flexShrink: 0 }}
+            >
+              <InputLabel>Sort</InputLabel>
+              <Select
+                disabled={selectedBookId}
+                value={selectedBookId ? "elasticity" : sort}
+                label="Sort"
+                onChange={(e) => onSortChange(e.target.value)}
+              >
+                <MenuItem value="mean">Consensus (Mean)</MenuItem>
+                <MenuItem value="elasticity">Elasticity (SD)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box
+            sx={{
+              width: { xs: "100%", md: "auto" },
+              minWidth: 0,
+              order: { xs: 2, md: 1 },
+              flex: { xs: "0 0 100%", md: 1 },
+            }}
+          >
+            <Legend
+              bookData={bookData}
+              handleToggleBook={handleToggleBook}
+              selectedBooks={selectedBooks}
+              selectedBookId={selectedBookId}
+              setSelectedBookId={setSelectedBookId}
+            />
+          </Box>
+
+          {/* <FormControl size="small" sx={{ minWidth: 85 }}>
+            <InputLabel>Show</InputLabel>
             <Select
               value={topN}
               label="Showing top"
@@ -190,7 +248,7 @@ export default function TopBar({
               <MenuItem value={10}>10</MenuItem>
               <MenuItem value={25}>25</MenuItem>
             </Select>
-          </FormControl>
+          </FormControl> */}
         </Box>
       </Toolbar>
     </AppBar>

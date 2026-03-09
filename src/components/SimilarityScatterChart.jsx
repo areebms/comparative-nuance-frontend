@@ -42,8 +42,9 @@ function createChartDatasets(rows, selectedBooks, selectedBookId) {
         return {
           x: bookData.similarity,
           y: rowIndex,
-          term: row.term,
+          label: `${row.term} - ${book.label}`,
           bookId: book.id,
+          zScore: bookData.zScore,
           n: bookData.n,
           coherence: bookData.coherence,
         };
@@ -118,6 +119,7 @@ function createMeanDataset(rows) {
         x: row.mean,
         y: rowIndex,
         term: row.term,
+        std: row.std,
         isMean: true,
       };
     })
@@ -189,11 +191,16 @@ function createChartOptions(rows, selectedBooks) {
           label: (context) => {
             const point = context.raw;
             if (point.isMean) {
-              return [`Term: ${point.term}`, `Mean Similarity: ${point.x.toFixed(3)}`];
+              return [
+                `${point.term} - Overall`,
+                `Mean Similarity: ${point.x.toFixed(3)}`,
+                `Standard Deviation: ${point.std.toFixed(3)}`,
+              ];
             }
             return [
-              `Term: ${point.term}`,
+              `${point.label}`,
               `Similarity: ${point.x.toFixed(3)}`,
+              `zScore: ${point.zScore.toFixed(3)}`,
               `Occurrence: ${point.n}`,
             ];
           },
@@ -208,7 +215,7 @@ function createChartOptions(rows, selectedBooks) {
         grace: "5%",
         title: {
           display: true,
-          text: "Similarity",
+          text: "Cosine Similarity",
           font: {
             size: 14,
             weight: 600,

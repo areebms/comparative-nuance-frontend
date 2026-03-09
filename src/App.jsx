@@ -41,6 +41,7 @@ export default function App() {
   // Search and filtering state
   const [term, setTerm] = useState("market");
   const [selectedBookId, setSelectedBookId] = useState(null);
+  const [sort, setSort] = useState("mean");
   const [topN, setTopN] = useState(25);
 
   // Data state
@@ -122,7 +123,6 @@ export default function App() {
     } else {
       setIsLoading(false);
     }
-
     return () => {
       cancelled = true;
     };
@@ -180,6 +180,7 @@ export default function App() {
       similarityCache,
       selectedBookIds,
       selectedBookId,
+      sort,
       topN
   });
 
@@ -197,6 +198,8 @@ export default function App() {
           setSelectedBookId={setSelectedBookId}
           topN={topN}
           onTopNChange={setTopN}
+          sort={sort}
+          onSortChange={setSort}
         />
 
         <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -207,7 +210,7 @@ export default function App() {
           )}
           <Paper elevation={0} sx={{ mb: 2, p: 3, borderRadius: 3 }}>
             <SimilarityScatterChart
-              rows={displayRows.slice(1)}
+              rows={displayRows.filter(row => row.term !== term)}
               selectedBooks={selectedBooks}
               selectedBookId={selectedBookId}
               isLoading={isLoading}
