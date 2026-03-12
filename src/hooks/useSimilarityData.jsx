@@ -1,4 +1,3 @@
-// src/hooks/useSimilarityData.js
 import { useMemo } from "react";
 
 import { mean, standardDeviation, zScore } from "simple-statistics";
@@ -11,22 +10,22 @@ export default function useSimilarityData({
   topN,
 }) {
   return useMemo(() => {
-    // 1. Bail early if we are missing data
+    const empty = { displayRows: [], bookCalculationStats: {} };
+
     if (!selectedBookIds || !selectedBookIds.length) {
-      return { displayRows: [], calcStats: {} };
+      return empty;
     }
 
     const hasAllSimilarityData = selectedBookIds.every(
       (id) => similarityCache[id],
     );
     if (!hasAllSimilarityData) {
-      return { displayRows: [], calcStats: {} };
+      return empty;
     }
 
     const termDataMap = new Map();
     const stats = {};
 
-    // Initialize stats
     selectedBookIds.forEach((id) => {
       stats[id] = {
         total: similarityCache[id]?.length ?? 0,
@@ -35,7 +34,7 @@ export default function useSimilarityData({
       };
     });
 
-    // 2. Aggregate raw cache data into unified rows
+    // Aggregate raw cache data into unified rows
     for (const bookId of selectedBookIds) {
       for (const item of similarityCache[bookId] || []) {
         if (!termDataMap.has(item.term)) {
@@ -52,14 +51,14 @@ export default function useSimilarityData({
           similarity: Number(item.similarity),
           zScore: null,
           n: Number(item.count),
-          coherence: Number(item.coherence) * 100, // TODO: Add CI
+          coherence: Number(item.coherence) * 100,
         };
       }
     }
 
     const validRows = [];
 
-    // 3. Filter, calculate means, and determine sort weights
+    // Filter, calculate means, and determine sort weights
     for (const row of termDataMap.values()) {
       const hasAllBooks = selectedBookIds.every((id) => row.byBook[id]);
       const meetsMinCount = selectedBookIds.every(
@@ -83,23 +82,21 @@ export default function useSimilarityData({
       row.std = standardDeviation(similarities);
 
       selectedBookIds.forEach((id) => {
-        row.byBook[id].zScore = zScore(
-          row.byBook[id].similarity,
-          row.mean,
-          row.std,
-        );
+        row.byBook[id].zScore =
+          row.std > 0
+            ? zScore(row.byBook[id].similarity, row.mean, row.std)
+            : 0;
       });
 
       row.sortable = selectedBookId
         ? row.byBook[selectedBookId]?.zScore
-        : sort == "mean"
+        : sort === "mean"
           ? row.mean
           : (row.std ?? 0);
 
       validRows.push(row);
     }
 
-    // 4. Sort and slice
     validRows.sort((a, b) => b.sortable - a.sortable);
 
     return {

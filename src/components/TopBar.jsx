@@ -10,7 +10,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Divider
+  Divider,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
@@ -81,11 +81,11 @@ const Legend = ({
         id={book.id}
         label={book.label}
         color={getColorForBook(book.position)}
-        selected={selectedBookId == String(book.id)}
+        selected={selectedBookId === String(book.id)}
         active={book.displayed}
         onClick={() => handleToggleBook(book.id)}
         onSelect={() =>
-          selectedBookId == String(book.id)
+          selectedBookId === String(book.id)
             ? setSelectedBookId(null)
             : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
         }
@@ -105,11 +105,11 @@ export default function TopBar({
   topN,
   onTopNChange,
   sort,
-  onSortChange
+  onSortChange,
 }) {
   const handleToggleBook = (bookId) => {
     setBookData((prevBookData) => {
-      selectedBookId == String(bookId) && setSelectedBookId(null);
+      selectedBookId === String(bookId) && setSelectedBookId(null);
       return prevBookData.map((book) =>
         book.id === bookId ? { ...book, displayed: !book.displayed } : book,
       );
@@ -128,8 +128,18 @@ export default function TopBar({
         borderColor: "divider",
       }}
     >
-      <Toolbar sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0, flexShrink: 0 }}>
+      <Toolbar
+        sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            minWidth: 0,
+            flexShrink: 0,
+          }}
+        >
           <Box
             component="span"
             sx={{
@@ -185,7 +195,7 @@ export default function TopBar({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  freesSolo // TODO: Remove
+                  freeSolo // TODO: Remove
                   placeholder="Click from Table"
                   label="Reference Term"
                   size="small"
@@ -193,7 +203,7 @@ export default function TopBar({
                     ...params.InputProps,
                     startAdornment: (
                       <>
-                      {/*  <InputAdornment position="start">
+                        {/*  <InputAdornment position="start">
                           <SearchIcon />
                         </InputAdornment> */}
                         {params.InputProps.startAdornment}
@@ -204,10 +214,7 @@ export default function TopBar({
               )}
             />
 
-            <FormControl
-              size="small"
-              sx={{ minWidth: 190, flexShrink: 0 }}
-            >
+            <FormControl size="small" sx={{ minWidth: 190, flexShrink: 0 }}>
               <InputLabel>Sort</InputLabel>
               <Select
                 disabled={selectedBookId}

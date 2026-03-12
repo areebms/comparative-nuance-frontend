@@ -107,20 +107,19 @@ function TermRow({ row, index, selectedBooks, onClick, selectedBookId }) {
   return (
     <TableRow
       hover
-      sx={{ cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
+      onClick={() => onClick(row.term)}
+      sx={{ cursor: "pointer" }}
     >
       <TableCell>{index + 1}</TableCell>
       <TableCell>
-        <Typography
-          fontWeight={700}
-          color="primary"
-          onClick={() => onClick(row.term)}
-        >
+        <Typography fontWeight={700} color="primary">
           {row.term}
         </Typography>
       </TableCell>
       {selectedBookId && (
-        <TableCell>{row.byBook[selectedBookId].zScore.toFixed(3)}</TableCell>
+        <TableCell>
+          {row.byBook[selectedBookId]?.zScore?.toFixed(3) ?? "—"}
+        </TableCell>
       )}
 
       <TableCell>
