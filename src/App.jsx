@@ -4,6 +4,7 @@ import {
   Container,
   Paper,
   Alert,
+  Skeleton,
   CssBaseline,
   ThemeProvider,
   createTheme,
@@ -140,12 +141,19 @@ export default function App() {
             </Alert>
           )}
           <Paper elevation={0} sx={{ mb: 2, p: 3, borderRadius: 3 }}>
-            <SimilarityScatterChart
-              rows={displayRows.filter((row) => row.term !== term)}
-              selectedBooks={selectedBooks}
-              selectedBookId={selectedBookId}
-              isLoading={isLoading}
-            />
+            {displayRows.length ? (
+              <SimilarityScatterChart
+                rows={displayRows.filter((row) => row.term !== term)}
+                selectedBooks={selectedBooks}
+                selectedBookId={selectedBookId}
+                isLoading={isLoading}
+              />
+            ) : (
+              <Skeleton
+                variant="rectangular"
+                sx={{ height: 420, width: "100%", borderRadius: 2 }}
+              />
+            )}
           </Paper>
 
           <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
