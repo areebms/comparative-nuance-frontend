@@ -11,7 +11,7 @@ interface CacheItem {
   term: string;
   similarity: number;
   count: number;
-  coherence: number;
+  similarity_ci: [number, number];
 }
 
 interface SimilarityDataProps {
@@ -31,7 +31,7 @@ export default function useSimilarityData({
   topN,
 } : SimilarityDataProps) {
   return useMemo(() => {
-    const empty = { displayRows: [], bookCalculationStats: {} };
+    const empty = { displayRows: [], bookCalculationStats: {}, totalSharedTerms: 0, sharedTerms: [] };
 
     if (!selectedBookIds?.length) return empty;
     if (!selectedBookIds.every((id) => similarityCache[id])) return empty;
@@ -48,7 +48,7 @@ export default function useSimilarityData({
           similarity: Number(item.similarity),
           zScore: null,
           n: Number(item.count),
-          coherence: Number(item.coherence) * 100,
+          similarity_ci: item.similarity_ci as [number, number],
         };
       }
     }
@@ -98,6 +98,8 @@ export default function useSimilarityData({
     return {
       displayRows: validRows.slice(0, topN),
       bookCalculationStats: stats,
+      totalSharedTerms: validRows.length,
+      sharedTerms: validRows.map((r) => r.term),
     };
   }, [similarityCache, selectedBookIds, selectedBookId, sort, topN]);
 }

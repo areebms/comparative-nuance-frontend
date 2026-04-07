@@ -1,10 +1,10 @@
+import { useState, useEffect } from "react";
 import {
   AppBar,
   Autocomplete,
   Toolbar,
   TextField,
   Box,
-  InputAdornment,
   Chip,
   FormControl,
   InputLabel,
@@ -12,23 +12,22 @@ import {
   MenuItem,
   Divider,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import PushPinIcon from "@mui/icons-material/PushPin";
 
-import { getColorForBook } from "../utils/bookColors";
 
 const BookChip = ({
   id,
   label,
   selected,
   active,
-  color,
+  yearColor,
   onSelect,
   onClick,
 }) => {
-  const primaryColor = active ? color : "grey";
-  const backgroundColor = active ? "transparent" : "lightgrey";
+  const borderColor = active ? yearColor.border : "grey";
+  const bgColor = active ? yearColor.fill : "lightgrey";
+  const textColor = active ? yearColor.text : "grey";
 
   return (
     <Chip
@@ -41,13 +40,13 @@ const BookChip = ({
       onDelete={onSelect}
       deleteIcon={selected ? <PushPinIcon /> : <CheckBoxOutlineBlankIcon />}
       sx={{
-        bgcolor: backgroundColor,
-        color: primaryColor,
-        border: `1px solid ${primaryColor}`,
+        bgcolor: bgColor,
+        color: textColor,
+        border: `1px solid ${borderColor}`,
         fontWeight: 600,
         "& .MuiChip-deleteIcon": {
-          color: primaryColor,
-          "&:hover": { color: primaryColor },
+          color: textColor,
+          "&:hover": { color: textColor },
           pointerEvents: active ? "auto" : "none",
           cursor: active ? "pointer" : "default",
           opacity: active ? 1 : 0.5,
@@ -80,7 +79,7 @@ const Legend = ({
       <BookChip
         id={book.id}
         label={book.label}
-        color={getColorForBook(book.position)}
+        yearColor={book.yearColor ?? { fill: "lightgrey", border: "grey", text: "grey" }}
         selected={selectedBookId === String(book.id)}
         active={book.displayed}
         onClick={() => handleToggleBook(book.id)}
@@ -95,18 +94,22 @@ const Legend = ({
 );
 
 export default function TopBar({
-  term,
-  onTermChange,
+  terms,
+  onTermsChange,
+  sharedTerms,
   bookData,
   setBookData,
   selectedBooks = [],
   selectedBookId,
   setSelectedBookId,
-  topN,
-  onTopNChange,
   sort,
   onSortChange,
 }) {
+  const [draftTerms, setDraftTerms] = useState(terms);
+  useEffect(() => {
+    setDraftTerms(terms);
+  }, [terms]);
+
   const handleToggleBook = (bookId) => {
     setBookData((prevBookData) => {
       selectedBookId === String(bookId) && setSelectedBookId(null);
@@ -180,14 +183,33 @@ export default function TopBar({
             }}
           >
             <Autocomplete
-              options={["Click from Table"]}
-              value={term}
-              // Todo: Fix
-              onChange={(_, value) => onTermChange("market")}
+              multiple
+              options={sharedTerms}
+              value={draftTerms}
+              onChange={(_, newValue) => {
+                if (newValue.length <= 2) {
+                  setDraftTerms(newValue);
+                  if (newValue.length >= 1) onTermsChange(newValue);
+                }
+              }}
+              onBlur={() => {
+                if (draftTerms.length === 0) setDraftTerms(terms);
+              }}
+              getOptionDisabled={() => draftTerms.length >= 2}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    label={option}
+                    size="small"
+                    {...getTagProps({ index })}
+                    key={option}
+                  />
+                ))
+              }
               sx={{
-                flex: { xs: 1, md: "0 0 220px" },
-                width: { xs: "100%", md: 220 },
-                minWidth: { xs: 0, md: 220 },
+                flex: { xs: 1, md: "0 0 300px" },
+                width: { xs: "100%", md: 300 },
+                minWidth: { xs: 0, md: 300 },
                 "& .MuiOutlinedInput-root": {
                   bgcolor: "background.paper",
                 },
@@ -195,21 +217,9 @@ export default function TopBar({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  freeSolo // TODO: Remove
-                  placeholder="Click from Table"
-                  label="Reference Term"
+                  placeholder={draftTerms.length === 0 ? "Select a term" : draftTerms.length === 1 ? "Add a second term (optional)" : ""}
+                  label="Reference Terms"
                   size="small"
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <>
-                        {/*  <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment> */}
-                        {params.InputProps.startAdornment}
-                      </>
-                    ),
-                  }}
                 />
               )}
             />
@@ -223,7 +233,7 @@ export default function TopBar({
                 onChange={(e) => onSortChange(e.target.value)}
               >
                 <MenuItem value="mean">Consensus (Mean)</MenuItem>
-                <MenuItem value="elasticity">Elasticity (SD)</MenuItem>
+                <MenuItem value="elasticity">Divergence (SD)</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -245,17 +255,6 @@ export default function TopBar({
             />
           </Box>
 
-          {/* <FormControl size="small" sx={{ minWidth: 85 }}>
-            <InputLabel>Show</InputLabel>
-            <Select
-              value={topN}
-              label="Showing top"
-              onChange={(e) => onTopNChange(Number(e.target.value))}
-            >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={25}>25</MenuItem>
-            </Select>
-          </FormControl> */}
         </Box>
       </Toolbar>
     </AppBar>
