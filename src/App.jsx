@@ -171,7 +171,7 @@ export default function App() {
                 {selectedBookId
                   ? `Terms with most distinctive proximity to '${terms.join("' & '")}' in ${selectedBooks.find((b) => String(b.id) === selectedBookId)?.label}`
                   : sort === "mean"
-                    ? `Terms with most stable conceptual proximity to '${terms.join("' & '")}'`
+                    ? `Terms with greatest conceptual proximity to '${terms.join("' & '")}'`
                     : `Terms with most drift in conceptual proximity to '${terms.join("' & '")}'`
                 }
               </Typography>
