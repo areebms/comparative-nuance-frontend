@@ -9,7 +9,9 @@ import {
   CssBaseline,
   ThemeProvider,
   createTheme,
+  IconButton,
 } from "@mui/material";
+import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
 import SimilarityScatterChart from "./components/SimilarityScatterChart";
 import ResultsTable from "./components/ResultsTable";
@@ -146,6 +148,16 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+        <IconButton
+          component="a"
+          href="https://github.com/areebms/embedding-analytics"
+          target="_blank"
+          rel="noopener noreferrer"
+          size="small"
+          sx={{ position: "fixed", bottom: 10, right: 10, color: "black", "& svg": { fontSize: 50 }, zIndex: 1300 }}
+        >
+          <GitHubIcon />
+        </IconButton>
         <TopBar
           terms={terms}
           onTermsChange={setTerms}

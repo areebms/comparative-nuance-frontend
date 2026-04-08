@@ -212,12 +212,14 @@ export default function TopBar({
                 minWidth: { xs: 0, md: 300 },
                 "& .MuiOutlinedInput-root": {
                   bgcolor: "background.paper",
+                  flexWrap: "nowrap",
+                  overflow: "hidden",
                 },
               }}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder={draftTerms.length === 0 ? "Select a term" : draftTerms.length === 1 ? "Add a second term (optional)" : ""}
+                  placeholder={draftTerms.length === 0 ? "Select a term" : draftTerms.length === 1 ? "Add second term" : ""}
                   label="Reference Terms"
                   size="small"
                 />
