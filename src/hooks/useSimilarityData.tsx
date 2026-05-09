@@ -99,7 +99,6 @@ export default function useSimilarityData({
       displayRows: validRows.slice(0, topN),
       bookCalculationStats: stats,
       totalSharedTerms: validRows.length,
-      sharedTerms: validRows.map((r) => r.term),
     };
   }, [similarityCache, selectedBookIds, selectedBookId, sort, topN]);
 }

@@ -12,112 +12,28 @@ import {
   MenuItem,
   Divider,
 } from "@mui/material";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import PushPinIcon from "@mui/icons-material/PushPin";
-
-
-const BookChip = ({
-  id,
-  label,
-  selected,
-  active,
-  yearColor,
-  onSelect,
-  onClick,
-}) => {
-  const borderColor = active ? yearColor.border : "grey";
-  const bgColor = active ? yearColor.fill : "lightgrey";
-  const textColor = active ? yearColor.text : "grey";
-
-  return (
-    <Chip
-      key={id}
-      label={label}
-      size="medium"
-      variant="outlined"
-      clickable
-      onClick={onClick}
-      onDelete={onSelect}
-      deleteIcon={selected ? <PushPinIcon /> : <CheckBoxOutlineBlankIcon />}
-      sx={{
-        bgcolor: bgColor,
-        color: textColor,
-        border: `1px solid ${borderColor}`,
-        fontWeight: 600,
-        "& .MuiChip-deleteIcon": {
-          color: textColor,
-          "&:hover": { color: textColor },
-          pointerEvents: active ? "auto" : "none",
-          cursor: active ? "pointer" : "default",
-          opacity: active ? 1 : 0.5,
-        },
-        "& .MuiChip-label": {
-          px: 2,
-        },
-      }}
-    />
-  );
-};
-
-const Legend = ({
-  bookData,
-  handleToggleBook,
-  selectedBooks,
-  selectedBookId,
-  setSelectedBookId,
-}) => (
-  <Box
-    sx={{
-      display: "flex",
-      flexWrap: "nowrap",
-      gap: 1,
-      overflowX: "auto",
-      minWidth: 0,
-    }}
-  >
-    {bookData.map((book) => (
-      <BookChip
-        id={book.id}
-        label={book.label}
-        yearColor={book.yearColor ?? { fill: "lightgrey", border: "grey", text: "grey" }}
-        selected={selectedBookId === String(book.id)}
-        active={book.displayed}
-        onClick={() => handleToggleBook(book.id)}
-        onSelect={() =>
-          selectedBookId === String(book.id)
-            ? setSelectedBookId(null)
-            : selectedBooks.length > 1 && setSelectedBookId(String(book.id))
-        }
-      />
-    ))}
-  </Box>
-);
+import Legend from "./Legend";
 
 export default function TopBar({
   terms,
   onTermsChange,
   sharedTerms,
   bookData,
-  setBookData,
+  hiddenBookIds,
+  onToggleBook,
   selectedBooks = [],
   selectedBookId,
   setSelectedBookId,
   sort,
   onSortChange,
 }) {
-  const [draftTerms, setDraftTerms] = useState(terms);
-  useEffect(() => {
-    setDraftTerms(terms);
-  }, [terms]);
+  const [draftTerms, setDraftTerms] = useState([]);
 
-  const handleToggleBook = (bookId) => {
-    setBookData((prevBookData) => {
-      selectedBookId === String(bookId) && setSelectedBookId(null);
-      return prevBookData.map((book) =>
-        book.id === bookId ? { ...book, displayed: !book.displayed } : book,
-      );
-    });
-  };
+  useEffect(() => {
+    setDraftTerms(
+      terms.map((t) => sharedTerms.find((o) => o.term === t)).filter(Boolean),
+    );
+  }, [terms, sharedTerms]);
 
   return (
     <AppBar
@@ -131,18 +47,8 @@ export default function TopBar({
         borderColor: "divider",
       }}
     >
-      <Toolbar
-        sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            minWidth: 0,
-            flexShrink: 0,
-          }}
-        >
+      <Toolbar sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0, flexShrink: 0 }}>
           <Box
             component="span"
             sx={{
@@ -186,23 +92,28 @@ export default function TopBar({
               multiple
               options={sharedTerms}
               value={draftTerms}
+              getOptionLabel={(opt) => `${opt.term} (${opt.books.length})`}
+              isOptionEqualToValue={(opt, val) => opt.term === val.term}
               onChange={(_, newValue) => {
                 if (newValue.length <= 2) {
                   setDraftTerms(newValue);
-                  if (newValue.length >= 1) onTermsChange(newValue);
+                  if (newValue.length >= 1) onTermsChange(newValue.map((o) => o.term));
                 }
               }}
               onBlur={() => {
-                if (draftTerms.length === 0) setDraftTerms(terms);
+                if (draftTerms.length === 0)
+                  setDraftTerms(
+                    terms.map((t) => sharedTerms.find((o) => o.term === t)).filter(Boolean),
+                  );
               }}
               getOptionDisabled={() => draftTerms.length >= 2}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
-                    label={option}
+                    label={option.term}
                     size="small"
                     {...getTagProps({ index })}
-                    key={option}
+                    key={option.term}
                   />
                 ))
               }
@@ -219,7 +130,13 @@ export default function TopBar({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder={draftTerms.length === 0 ? "Select a term" : draftTerms.length === 1 ? "Add second term" : ""}
+                  placeholder={
+                    draftTerms.length === 0
+                      ? "Select a term"
+                      : draftTerms.length === 1
+                        ? "Add second term"
+                        : ""
+                  }
                   label="Reference Terms"
                   size="small"
                 />
@@ -229,7 +146,7 @@ export default function TopBar({
             <FormControl size="small" sx={{ minWidth: 190, flexShrink: 0 }}>
               <InputLabel>Sort</InputLabel>
               <Select
-                disabled={selectedBookId}
+                disabled={!!selectedBookId}
                 value={selectedBookId ? "elasticity" : sort}
                 label="Sort"
                 onChange={(e) => onSortChange(e.target.value)}
@@ -250,13 +167,13 @@ export default function TopBar({
           >
             <Legend
               bookData={bookData}
-              handleToggleBook={handleToggleBook}
+              hiddenBookIds={hiddenBookIds}
+              onToggleBook={onToggleBook}
               selectedBooks={selectedBooks}
               selectedBookId={selectedBookId}
               setSelectedBookId={setSelectedBookId}
             />
           </Box>
-
         </Box>
       </Toolbar>
     </AppBar>
