@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { mean, standardDeviation, zScore } from "simple-statistics";
 
 interface TooltipData {
-  total : number,
-  removed : number,
-  shown : number
+  total: number,
+  removed: number,
+  shown: number
 }
 
 interface CacheItem {
@@ -15,32 +15,33 @@ interface CacheItem {
 }
 
 interface SimilarityDataProps {
-  similarityCache : Record<number, CacheItem[]>,
-  selectedBookIds : number[],
-  selectedBookId : number,
-  sort : string,
-  topN : number,
+  bookSimilarityData: Record<number, CacheItem[]>,
+  selectedBookIds: number[],
+  selectedBookId: number,
+  sort: string,
+  topN: number,
 }
 
 
 export default function useSimilarityData({
-  similarityCache,
+  bookSimilarityData,
   selectedBookIds,
   selectedBookId,
   sort,
   topN,
-} : SimilarityDataProps) {
+}: SimilarityDataProps) {
   return useMemo(() => {
-    const empty = { displayRows: [], bookCalculationStats: {}, totalSharedTerms: 0, sharedTerms: [] };
+    const empty = { tableData: [], bookCalculationStats: {}, termCount: 0, sharedTerms: [] };
 
     if (!selectedBookIds?.length) return empty;
-    if (!selectedBookIds.every((id) => similarityCache[id])) return empty;
+
+    const validBookIds = selectedBookIds.filter(bookId => bookSimilarityData[bookId]);
 
     // 1. Aggregate cache data into rows keyed by term
     const termDataMap = new Map();
 
-    for (const bookId of selectedBookIds) {
-      for (const item of similarityCache[bookId]) {
+    for (const bookId of validBookIds) {
+      for (const item of bookSimilarityData[bookId]) {
         if (!termDataMap.has(item.term)) {
           termDataMap.set(item.term, { term: item.term, byBook: {} });
         }
@@ -57,20 +58,20 @@ export default function useSimilarityData({
     const validRows = [];
 
     for (const row of termDataMap.values()) {
-      const isValid = selectedBookIds.every(
+      const isValid = validBookIds.every(
         (id) => row.byBook[id] && row.byBook[id].n >= 10,
       );
       if (!isValid) continue;
 
       // Mean/std across books, excluding the pinned book if any
-      const similarities = selectedBookIds
+      const similarities = validBookIds
         .filter((id) => String(id) !== String(selectedBookId))
         .map((id) => row.byBook[id].similarity);
 
       row.mean = mean(similarities);
       row.std = standardDeviation(similarities);
 
-      for (const id of selectedBookIds) {
+      for (const id of validBookIds) {
         row.byBook[id].zScore =
           row.std > 0
             ? zScore(row.byBook[id].similarity, row.mean, row.std)
@@ -90,15 +91,15 @@ export default function useSimilarityData({
 
     // 3. Compute stats (how many terms were filtered out per book)
     const stats: Record<number, TooltipData> = {};
-    for (const id of selectedBookIds) {
-      const total = similarityCache[id].length;
+    for (const id of validBookIds) {
+      const total = bookSimilarityData[id].length;
       stats[id] = { total, removed: total - validRows.length, shown: topN };
     }
 
     return {
-      displayRows: validRows.slice(0, topN),
+      tableData: validRows.slice(0, topN),
       bookCalculationStats: stats,
-      totalSharedTerms: validRows.length,
+      termCount: validRows.length,
     };
-  }, [similarityCache, selectedBookIds, selectedBookId, sort, topN]);
+  }, [bookSimilarityData, selectedBookIds, selectedBookId, sort, topN]);
 }

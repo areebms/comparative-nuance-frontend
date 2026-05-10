@@ -15,11 +15,12 @@ import {
 import Legend from "./Legend";
 
 export default function TopBar({
-  terms,
+  selectedTerms,
   onTermsChange,
-  sharedTerms,
+  allTerms,
   bookData,
   hiddenBookIds,
+  missingBookIds,
   onToggleBook,
   selectedBooks = [],
   selectedBookId,
@@ -31,9 +32,9 @@ export default function TopBar({
 
   useEffect(() => {
     setDraftTerms(
-      terms.map((t) => sharedTerms.find((o) => o.term === t)).filter(Boolean),
+      selectedTerms.map((t) => allTerms.find((o) => o.term === t)).filter(Boolean),
     );
-  }, [terms, sharedTerms]);
+  }, [selectedTerms, allTerms]);
 
   return (
     <AppBar
@@ -90,7 +91,7 @@ export default function TopBar({
           >
             <Autocomplete
               multiple
-              options={sharedTerms}
+              options={allTerms}
               value={draftTerms}
               getOptionLabel={(opt) => `${opt.term} (${opt.books.length})`}
               isOptionEqualToValue={(opt, val) => opt.term === val.term}
@@ -103,7 +104,7 @@ export default function TopBar({
               onBlur={() => {
                 if (draftTerms.length === 0)
                   setDraftTerms(
-                    terms.map((t) => sharedTerms.find((o) => o.term === t)).filter(Boolean),
+                    terms.map((t) => allTerms.find((o) => o.term === t)).filter(Boolean),
                   );
               }}
               getOptionDisabled={() => draftTerms.length >= 2}
@@ -168,6 +169,7 @@ export default function TopBar({
             <Legend
               bookData={bookData}
               hiddenBookIds={hiddenBookIds}
+              missingBookIds={missingBookIds}
               onToggleBook={onToggleBook}
               selectedBooks={selectedBooks}
               selectedBookId={selectedBookId}

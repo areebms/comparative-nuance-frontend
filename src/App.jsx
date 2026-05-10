@@ -41,25 +41,25 @@ export default function App() {
   const { data: allBooks = [] } = useBooks();
   const { data: allTerms = [] } = useTerms();
 
-  const displayedBooks = useMemo(
-    () => allBooks.filter((b) => !hiddenBookIds.has(b.id)),
-    [allBooks, hiddenBookIds],
-  );
-
-  const displayedBookIds = useMemo(
-    () => displayedBooks.map((b) => b.id),
-    [displayedBooks],
-  );
+  const [displayedBooks, displayedBookIds] = useMemo(() => {
+    const books = allBooks.filter((b) => !hiddenBookIds.has(b.id));
+    return [books, books.map((b) => b.id)];
+  }, [allBooks, hiddenBookIds]);
 
   const {
-    cache: similarityCache,
+    cache: bookSimilarityData,
     isLoading,
     error: rowsError,
   } = useSimilarityQueries(displayedBookIds, terms);
 
-  const { displayRows, bookCalculationStats, totalSharedTerms } =
+  const missingBookIds = useMemo(
+    () => new Set(displayedBookIds.filter((id) => !(id in bookSimilarityData))),
+    [displayedBookIds, bookSimilarityData],
+  );
+
+  const { tableData, bookCalculationStats, termCount } =
     useSimilarityData({
-      similarityCache,
+      bookSimilarityData,
       selectedBookIds: displayedBookIds,
       selectedBookId,
       sort,
@@ -71,7 +71,9 @@ export default function App() {
     if (selectedBookId === String(bookId)) setSelectedBookId(null);
     setHiddenBookIds((prev) => {
       const next = new Set(prev);
-      next.has(bookId) ? next.delete(bookId) : next.add(bookId);
+      next.has(bookId)
+        ? next.delete(bookId)
+        : next.add(bookId);
       return next;
     });
   };
@@ -89,11 +91,12 @@ export default function App() {
       <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
         <GitHubLink />
         <TopBar
-          terms={terms}
+          selectedTerms={terms}
           onTermsChange={setTerms}
-          sharedTerms={allTerms}
+          allTerms={allTerms}
           bookData={allBooks}
           hiddenBookIds={hiddenBookIds}
+          missingBookIds={missingBookIds}
           onToggleBook={handleToggleBook}
           selectedBooks={displayedBooks}
           selectedBookId={selectedBookId}
@@ -136,9 +139,9 @@ export default function App() {
           </Box>
 
           <Paper elevation={0} sx={{ mb: 2, p: 3, borderRadius: 3 }}>
-            {displayRows.length ? (
+            {tableData.length ? (
               <SimilarityScatterChart
-                rows={displayRows.filter(
+                rows={tableData.filter(
                   (row) => terms.length === 2 || !terms.includes(row.term),
                 )}
                 selectedBooks={displayedBooks}
@@ -153,16 +156,20 @@ export default function App() {
             )}
           </Paper>
 
-          <Paper id="results-table" elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+          <Paper
+            id="results-table"
+            elevation={0}
+            sx={{ p: 3, borderRadius: 3 }}
+          >
             <ResultsTable
-              rows={displayRows.filter(
+              rows={tableData.filter(
                 (row) => terms.length === 2 || !terms.includes(row.term),
               )}
               selectedBooks={displayedBooks}
               selectedBookId={selectedBookId}
               calcStats={bookCalculationStats}
               onClick={(t) => setTerms([t])}
-              hiddenCount={totalSharedTerms - displayRows.length}
+              hiddenCount={termCount - tableData.length}
             />
           </Paper>
         </Container>

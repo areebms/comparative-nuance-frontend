@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import BookChip from "./BookChip";
 
-export default function Legend({ bookData, hiddenBookIds, onToggleBook, selectedBooks, selectedBookId, setSelectedBookId }) {
+export default function Legend({ bookData, missingBookIds, hiddenBookIds, onToggleBook, selectedBooks, selectedBookId, setSelectedBookId }) {
   return (
     <Box sx={{ display: "flex", flexWrap: "nowrap", gap: 1, overflowX: "auto", minWidth: 0 }}>
       {bookData.map((book) => (
@@ -11,7 +11,8 @@ export default function Legend({ bookData, hiddenBookIds, onToggleBook, selected
           label={book.label}
           yearColor={book.yearColor ?? { fill: "lightgrey", border: "grey", text: "grey" }}
           selected={selectedBookId === String(book.id)}
-          active={!hiddenBookIds.has(book.id)}
+          active={!(hiddenBookIds.has(book.id) || missingBookIds.has(book.id))}
+          clickable={!missingBookIds.has(book.id)}
           onToggle={() => onToggleBook(book.id)}
           onSelect={() =>
             selectedBookId === String(book.id)

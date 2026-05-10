@@ -18,8 +18,8 @@ function fetchTerms() {
   return fetchJson("/terms");
 }
 
-function fetchSimilarity(bookId, terms) {
-  return fetchJson(`/similarity/${bookId}`, {
+async function fetchSimilarity(bookId, terms) {
+  const res = await fetch(`${API_URL}/similarity/${bookId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -27,6 +27,9 @@ function fetchSimilarity(bookId, terms) {
       ...(terms[1] ? { secondary_term: terms[1] } : {}),
     }),
   });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`/similarity/${bookId}: ${res.status}`);
+  return res.json();
 }
 
 // ── Query hooks ────────────────────────────────────────────────
@@ -82,7 +85,9 @@ export function useSimilarityQueries(bookIds, terms) {
 
   if (allDone) {
     bookIds.forEach((id, i) => {
-      cache[id] = queries[i].data;
+      if (queries[i].data !== null) {
+        cache[id] = queries[i].data;
+      }
     });
   }
 

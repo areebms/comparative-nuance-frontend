@@ -2,7 +2,7 @@ import { Chip } from "@mui/material";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import PushPinIcon from "@mui/icons-material/PushPin";
 
-export default function BookChip({ id, label, active, selected, yearColor, onToggle, onSelect }) {
+export default function BookChip({ id, label, active, selected, yearColor, onToggle, onSelect, clickable }) {
   const borderColor = active ? yearColor.border : "grey";
   const bgColor = active ? yearColor.fill : "lightgrey";
   const textColor = active ? yearColor.text : "grey";
@@ -13,7 +13,7 @@ export default function BookChip({ id, label, active, selected, yearColor, onTog
       label={label}
       size="medium"
       variant="outlined"
-      clickable
+      clickable={clickable}
       onClick={onToggle}
       onDelete={onSelect}
       deleteIcon={selected ? <PushPinIcon /> : <CheckBoxOutlineBlankIcon />}
