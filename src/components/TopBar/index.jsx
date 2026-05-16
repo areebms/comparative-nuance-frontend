@@ -1,11 +1,7 @@
-import { useState, useEffect } from "react";
 import {
   AppBar,
-  Autocomplete,
   Toolbar,
-  TextField,
   Box,
-  Chip,
   FormControl,
   InputLabel,
   Select,
@@ -13,10 +9,58 @@ import {
   Divider,
 } from "@mui/material";
 import Legend from "./Legend";
+import VectorExpressionInput from "./VectorExpressionInput";
+
+const LogoBox = () => (
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      minWidth: 0,
+    }}
+  >
+    <Box
+      component="span"
+      sx={{
+        fontSize: 18,
+        fontWeight: 700,
+        letterSpacing: 0.3,
+        color: "text.primary",
+        whiteSpace: "nowrap",
+      }}
+    >
+      Embedding Analytics
+    </Box>
+
+    <Divider
+      orientation="vertical"
+      flexItem
+      sx={{ display: { xs: "none", lg: "block" } }}
+    />
+  </Box>
+);
+
+const SortSelect = ({ selectedBookId, sort, onSortChange }) => (
+  <FormControl size="small" sx={{ width: "100%" }}>
+    <InputLabel>Sort</InputLabel>
+    <Select
+      disabled={!!selectedBookId}
+      value={selectedBookId ? "elasticity" : sort}
+      label="Sort"
+      onChange={(e) => onSortChange(e.target.value)}
+    >
+      <MenuItem value="mean">Consensus (Mean)</MenuItem>
+      <MenuItem value="elasticity">Divergence (SD)</MenuItem>
+    </Select>
+  </FormControl>
+);
 
 export default function TopBar({
-  selectedTerms,
-  onTermsChange,
+  expression,
+  onExpressionChange,
+  onChatSubmit,
+  chatSubmitting,
   allTerms,
   bookData,
   hiddenBookIds,
@@ -28,142 +72,50 @@ export default function TopBar({
   sort,
   onSortChange,
 }) {
-  const [draftTerms, setDraftTerms] = useState([]);
-
-  useEffect(() => {
-    setDraftTerms(
-      selectedTerms.map((t) => allTerms.find((o) => o.term === t)).filter(Boolean),
-    );
-  }, [selectedTerms, allTerms]);
-
   return (
     <AppBar
       position="sticky"
       color="default"
       elevation={0}
       sx={{
-        bgcolor: "rgba(255, 255, 255, 0.9)",
+        bgcolor: "rgba(255, 255, 255, 0.92)",
         backdropFilter: "blur(10px)",
         borderBottom: 1,
         borderColor: "divider",
       }}
     >
-      <Toolbar sx={{ gap: 2, alignItems: "center", width: "100%", flexWrap: "wrap" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0, flexShrink: 0 }}>
-          <Box
-            component="span"
-            sx={{
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: 0.3,
-              color: "text.primary",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Embedding Analytics
-          </Box>
-          <Divider orientation="vertical" flexItem />
-        </Box>
-
+      <Toolbar
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "auto minmax(0, 1fr)",
+          },
+          gap: { xs: 1.5, lg: 2 },
+          alignItems: "center",
+          width: "100%",
+          py: 1,
+        }}
+      >
+        <LogoBox />
         <Box
           sx={{
-            display: "flex",
-            alignItems: { xs: "flex-start", md: "center" },
-            flexWrap: { xs: "wrap", md: "nowrap" },
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "minmax(0, 1fr)",
+              lg: "minmax(260px, 1fr) minmax(320px, 1fr)",
+            },
             gap: 2,
-            marginLeft: { xs: 0, md: "auto" },
+            alignItems: "center",
             minWidth: 0,
-            flexBasis: { xs: "100%", md: "auto" },
-            width: { xs: "100%", md: "auto" },
+            width: "100%",
           }}
         >
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              flexWrap: "nowrap",
-              order: { xs: 1, md: 2 },
-              width: { xs: "100%", md: "auto" },
+              gridColumn: { xs: "1 / -1", lg: "auto" },
               minWidth: 0,
-              flexShrink: 0,
-            }}
-          >
-            <Autocomplete
-              multiple
-              options={allTerms}
-              value={draftTerms}
-              getOptionLabel={(opt) => `${opt.term} (${opt.books.length})`}
-              isOptionEqualToValue={(opt, val) => opt.term === val.term}
-              onChange={(_, newValue) => {
-                if (newValue.length <= 2) {
-                  setDraftTerms(newValue);
-                  if (newValue.length >= 1) onTermsChange(newValue.map((o) => o.term));
-                }
-              }}
-              onBlur={() => {
-                if (draftTerms.length === 0)
-                  setDraftTerms(
-                    terms.map((t) => allTerms.find((o) => o.term === t)).filter(Boolean),
-                  );
-              }}
-              getOptionDisabled={() => draftTerms.length >= 2}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option.term}
-                    size="small"
-                    {...getTagProps({ index })}
-                    key={option.term}
-                  />
-                ))
-              }
-              sx={{
-                flex: { xs: 1, md: "0 0 300px" },
-                width: { xs: "100%", md: 300 },
-                minWidth: { xs: 0, md: 300 },
-                "& .MuiOutlinedInput-root": {
-                  bgcolor: "background.paper",
-                  flexWrap: "nowrap",
-                  overflow: "hidden",
-                },
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={
-                    draftTerms.length === 0
-                      ? "Select a term"
-                      : draftTerms.length === 1
-                        ? "Add second term"
-                        : ""
-                  }
-                  label="Reference Terms"
-                  size="small"
-                />
-              )}
-            />
-
-            <FormControl size="small" sx={{ minWidth: 190, flexShrink: 0 }}>
-              <InputLabel>Sort</InputLabel>
-              <Select
-                disabled={!!selectedBookId}
-                value={selectedBookId ? "elasticity" : sort}
-                label="Sort"
-                onChange={(e) => onSortChange(e.target.value)}
-              >
-                <MenuItem value="mean">Consensus (Mean)</MenuItem>
-                <MenuItem value="elasticity">Divergence (SD)</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-
-          <Box
-            sx={{
-              width: { xs: "100%", md: "auto" },
-              minWidth: 0,
-              order: { xs: 2, md: 1 },
-              flex: { xs: "0 0 100%", md: 1 },
             }}
           >
             <Legend
@@ -176,6 +128,35 @@ export default function TopBar({
               setSelectedBookId={setSelectedBookId}
             />
           </Box>
+
+          <Box
+            sx={{
+              gridColumn: { xs: "1 / -1", sm: "1 / 2", lg: "auto" },
+              minWidth: 0,
+            }}
+          >
+            <VectorExpressionInput
+              allTerms={allTerms}
+              expression={expression}
+              onExpressionChange={onExpressionChange}
+              onChatSubmit={onChatSubmit}
+              chatSubmitting={chatSubmitting}
+            />
+          </Box>
+
+          {/* <Box
+            sx={{
+              gridColumn: { xs: "1 / -1", sm: "2 / 3", lg: "auto" },
+              minWidth: 0,
+              width: "100%",
+            }}
+          >
+            <SortSelect
+              sort={sort}
+              selectedBookId={selectedBookId}
+              onSortChange={onSortChange}
+            />
+          </Box> */}
         </Box>
       </Toolbar>
     </AppBar>

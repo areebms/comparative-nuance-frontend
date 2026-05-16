@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { mean, standardDeviation, zScore } from "simple-statistics";
 
 interface TooltipData {
-  total: number,
-  removed: number,
-  shown: number
+  total: number;
+  removed: number;
+  shown: number;
 }
 
 interface CacheItem {
@@ -15,13 +15,12 @@ interface CacheItem {
 }
 
 interface SimilarityDataProps {
-  bookSimilarityData: Record<number, CacheItem[]>,
-  selectedBookIds: number[],
-  selectedBookId: number,
-  sort: string,
-  topN: number,
+  bookSimilarityData: Record<number, CacheItem[]>;
+  selectedBookIds: number[];
+  selectedBookId: number;
+  sort: string;
+  topN: number;
 }
-
 
 export default function useSimilarityData({
   bookSimilarityData,
@@ -31,11 +30,18 @@ export default function useSimilarityData({
   topN,
 }: SimilarityDataProps) {
   return useMemo(() => {
-    const empty = { tableData: [], bookCalculationStats: {}, termCount: 0, sharedTerms: [] };
+    const empty = {
+      tableData: [],
+      bookCalculationStats: {},
+      termCount: 0,
+      sharedTerms: [],
+    };
 
     if (!selectedBookIds?.length) return empty;
 
-    const validBookIds = selectedBookIds.filter(bookId => bookSimilarityData[bookId]);
+    const validBookIds = selectedBookIds.filter(
+      (bookId) => bookSimilarityData[bookId],
+    );
 
     // 1. Aggregate cache data into rows keyed by term
     const termDataMap = new Map();
@@ -58,20 +64,19 @@ export default function useSimilarityData({
     const validRows = [];
 
     for (const row of termDataMap.values()) {
-      const isValid = validBookIds.every(
-        (id) => row.byBook[id] && row.byBook[id].n >= 10,
-      );
+      const isValid = validBookIds.filter((id) => row.byBook[id]).length > 1;
       if (!isValid) continue;
 
       // Mean/std across books, excluding the pinned book if any
       const similarities = validBookIds
-        .filter((id) => String(id) !== String(selectedBookId))
+        .filter((id) => row.byBook[id] && String(id) !== String(selectedBookId))
         .map((id) => row.byBook[id].similarity);
 
       row.mean = mean(similarities);
       row.std = standardDeviation(similarities);
 
       for (const id of validBookIds) {
+        if (!row.byBook[id]) continue;
         row.byBook[id].zScore =
           row.std > 0
             ? zScore(row.byBook[id].similarity, row.mean, row.std)

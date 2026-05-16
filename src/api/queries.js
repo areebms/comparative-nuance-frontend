@@ -1,4 +1,4 @@
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,17 +18,31 @@ function fetchTerms() {
   return fetchJson("/terms");
 }
 
-async function fetchSimilarity(bookId, terms) {
+async function fetchSimilarity(bookId, expression) {
   const res = await fetch(`${API_URL}/similarity/${bookId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      primary_term: terms[0],
-      ...(terms[1] ? { secondary_term: terms[1] } : {}),
-    }),
+    body: JSON.stringify(expression),
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`/similarity/${bookId}: ${res.status}`);
+  return res.json();
+}
+
+export async function parseChatQuery(message) {
+  const res = await fetch(`${API_URL}/parse-chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const detail =
+      body?.detail && typeof body.detail === "object"
+        ? body.detail.message
+        : body?.detail || `parse-chat: ${res.status}`;
+    throw new Error(detail);
+  }
   return res.json();
 }
 
@@ -65,14 +79,14 @@ export function useTerms() {
   });
 }
 
-export function useSimilarityQueries(bookIds, terms) {
-  const termsKey = terms.join("\x00");
-  const enabled = terms.length > 0 && !!terms[0] && bookIds.length > 0;
+export function useSimilarityQueries(bookIds, expression) {
+  const expressionKey = JSON.stringify(expression);
+  const enabled = expression !== null && bookIds.length > 0;
 
   const queries = useQueries({
     queries: bookIds.map((id) => ({
-      queryKey: ["similarity", id, termsKey],
-      queryFn: () => fetchSimilarity(id, terms),
+      queryKey: ["similarity", id, expressionKey],
+      queryFn: () => fetchSimilarity(id, {tree: expression}),
       enabled,
       staleTime: 5 * 60 * 1000,
     })),
@@ -92,6 +106,12 @@ export function useSimilarityQueries(bookIds, terms) {
   }
 
   return { cache, isLoading: anyLoading, isReady: allDone, error };
+}
+
+export function useParseChatQuery() {
+  return useMutation({
+    mutationFn: (message) => parseChatQuery(message),
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────

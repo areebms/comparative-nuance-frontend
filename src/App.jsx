@@ -15,8 +15,9 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
 import SimilarityScatterChart from "./components/SimilarityScatterChart";
 import ResultsTable from "./components/ResultsTable";
-import { useBooks, useTerms, useSimilarityQueries } from "./api/queries";
+import { useBooks, useTerms, useSimilarityQueries, useParseChatQuery } from "./api/queries";
 import useSimilarityData from "./hooks/useSimilarityData";
+import { parseExpression, extractTerms } from "./utils/vectorExpressionParser";
 
 const theme = createTheme({
   palette: {
@@ -31,7 +32,8 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [terms, setTerms] = useState(["market"]);
+  const [expression, setExpression] = useState("market");
+  const parsedExpression = useMemo(() => parseExpression(expression), [expression]);
   const [selectedBookId, setSelectedBookId] = useState(null);
   const [sort, setSort] = useState("mean");
   const [topN, setTopN] = useState(25);
@@ -40,6 +42,14 @@ export default function App() {
   // Data fetching
   const { data: allBooks = [] } = useBooks();
   const { data: allTerms = [] } = useTerms();
+
+  const chatMutation = useParseChatQuery();
+
+  const handleChatSubmit = async (message) => {
+    const result = await chatMutation.mutateAsync(message);
+    setExpression(result.expression);
+    return result;
+  };
 
   const [displayedBooks, displayedBookIds] = useMemo(() => {
     const books = allBooks.filter((b) => !hiddenBookIds.has(b.id));
@@ -50,40 +60,41 @@ export default function App() {
     cache: bookSimilarityData,
     isLoading,
     error: rowsError,
-  } = useSimilarityQueries(displayedBookIds, terms);
+  } = useSimilarityQueries(displayedBookIds, parsedExpression);
 
   const missingBookIds = useMemo(
     () => new Set(displayedBookIds.filter((id) => !(id in bookSimilarityData))),
     [displayedBookIds, bookSimilarityData],
   );
 
-  const { tableData, bookCalculationStats, termCount } =
-    useSimilarityData({
-      bookSimilarityData,
-      selectedBookIds: displayedBookIds,
-      selectedBookId,
-      sort,
-      topN,
-    });
+  const { tableData, bookCalculationStats, termCount } = useSimilarityData({
+    bookSimilarityData,
+    selectedBookIds: displayedBookIds,
+    selectedBookId,
+    sort,
+    topN,
+  });
 
   // Book visibility toggle
   const handleToggleBook = (bookId) => {
     if (selectedBookId === String(bookId)) setSelectedBookId(null);
     setHiddenBookIds((prev) => {
       const next = new Set(prev);
-      next.has(bookId)
-        ? next.delete(bookId)
-        : next.add(bookId);
+      next.has(bookId) ? next.delete(bookId) : next.add(bookId);
       return next;
     });
   };
 
   // Heading text
+  const expressionLabel = expression.trim() || "...";
   const heading = selectedBookId
-    ? `Terms with most distinctive proximity to '${terms.join("' & '")}' in ${displayedBooks.find((b) => String(b.id) === selectedBookId)?.label}`
+    ? `Terms with most distinctive proximity to '${expressionLabel}' in ${displayedBooks.find((b) => String(b.id) === selectedBookId)?.label}`
     : sort === "mean"
-      ? `Terms with greatest conceptual proximity to '${terms.join("' & '")}'`
-      : `Terms with most drift in conceptual proximity to '${terms.join("' & '")}'`;
+      ? `Terms with greatest conceptual proximity to '${expressionLabel}'`
+      : `Terms with most drift in conceptual proximity to '${expressionLabel}'`;
+
+
+  const usedTerms = extractTerms(parsedExpression);
 
   return (
     <ThemeProvider theme={theme}>
@@ -91,8 +102,10 @@ export default function App() {
       <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
         <GitHubLink />
         <TopBar
-          selectedTerms={terms}
-          onTermsChange={setTerms}
+          expression={expression}
+          onExpressionChange={setExpression}
+          onChatSubmit={handleChatSubmit}
+          chatSubmitting={chatMutation.isPending}
           allTerms={allTerms}
           bookData={allBooks}
           hiddenBookIds={hiddenBookIds}
@@ -141,9 +154,7 @@ export default function App() {
           <Paper elevation={0} sx={{ mb: 2, p: 3, borderRadius: 3 }}>
             {tableData.length ? (
               <SimilarityScatterChart
-                rows={tableData.filter(
-                  (row) => terms.length === 2 || !terms.includes(row.term),
-                )}
+                rows={tableData.filter((row) => usedTerms.length > 1 || !usedTerms.includes(row.term))}
                 selectedBooks={displayedBooks}
                 selectedBookId={selectedBookId}
                 isLoading={isLoading}
@@ -162,13 +173,11 @@ export default function App() {
             sx={{ p: 3, borderRadius: 3 }}
           >
             <ResultsTable
-              rows={tableData.filter(
-                (row) => terms.length === 2 || !terms.includes(row.term),
-              )}
+              rows={tableData.filter((row) => usedTerms.length > 1 || !usedTerms.includes(row.term))}
               selectedBooks={displayedBooks}
               selectedBookId={selectedBookId}
               calcStats={bookCalculationStats}
-              onClick={(t) => setTerms([t])}
+              onClick={(t) => setExpression(t)}
               hiddenCount={termCount - tableData.length}
             />
           </Paper>
