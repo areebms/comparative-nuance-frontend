@@ -61,7 +61,7 @@ function VectorExpressionChips({
   );
 }
 
-type InputMode = "chat" | "vector";
+type InputMode = "describe" | "vector";
 
 function InputModeControl({
   mode,
@@ -93,18 +93,18 @@ function InputModeControl({
           },
         }}
       >
-        {mode === "chat" ? "Chat" : "Vector"}
+        {mode === "describe" ? "Describe" : "Vector"}
       </Button>
 
       <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)}>
         <MenuItem
-          selected={mode === "chat"}
+          selected={mode === "describe"}
           onClick={() => {
-            onModeChange("chat");
+            onModeChange("describe");
             setAnchorEl(null);
           }}
         >
-          Chat
+          Describe
         </MenuItem>
 
         <MenuItem
@@ -210,18 +210,18 @@ export default function VectorExpressionInput({
   allTerms,
   expression,
   onExpressionChange,
-  onChatSubmit,
-  chatSubmitting,
+  onDescribeSubmit,
+  describeSubmitting,
 }: {
   allTerms: TermEntry[];
   expression: string;
   onExpressionChange: (expression: string) => void;
-  onChatSubmit: (message: string) => Promise<{
+  onDescribeSubmit: (message: string) => Promise<{
     expression: string;
     terms: string[];
     substitutions: { original: string; resolved: string }[];
   }>;
-  chatSubmitting: boolean;
+  describeSubmitting: boolean;
 }) {
   const [mode, setMode] = useState<InputMode>("vector");
   const [draftExpression, setDraftExpression] = useState(expression);
@@ -231,12 +231,12 @@ export default function VectorExpressionInput({
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Chat mode state
-  const [chatMessage, setChatMessage] = useState("");
-  const [chatError, setChatError] = useState<string | null>(null);
+  // Describe mode state
+  const [describeMessage, setDescribeMessage] = useState("");
+  const [describeError, setDescribeError] = useState<string | null>(null);
 
   const handleModeChange = (newMode: InputMode) => {
-    if (newMode === "chat") {
+    if (newMode === "describe") {
       setDraftExpression("");
       onExpressionChange("");
     }
@@ -263,13 +263,13 @@ export default function VectorExpressionInput({
     onExpressionChange(draftExpression);
   };
 
-  const handleChatSubmit = async () => {
-    const trimmed = chatMessage.trim();
+  const handleDescribeSubmit = async () => {
+    const trimmed = describeMessage.trim();
     if (!trimmed) return;
 
-    setChatError(null);
+    setDescribeError(null);
     try {
-      const result = await onChatSubmit(trimmed);
+      const result = await onDescribeSubmit(trimmed);
       setDraftExpression(result.expression);
       setMode("vector");
 
@@ -278,17 +278,17 @@ export default function VectorExpressionInput({
           (s: { original: string; resolved: string }) =>
             `"${s.original}" resolved to "${s.resolved}"`,
         );
-        setChatError(lines.join("; "));
+        setDescribeError(lines.join("; "));
       }
     } catch (err) {
-      setChatError(err instanceof Error ? err.message : String(err));
+      setDescribeError(err instanceof Error ? err.message : String(err));
     }
   };
 
-  const handleChatKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleDescribeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleChatSubmit();
+      handleDescribeSubmit();
     }
   };
 
@@ -394,11 +394,11 @@ export default function VectorExpressionInput({
         ) : (
           <>
             <TextField
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={handleChatKeyDown}
+              value={describeMessage}
+              onChange={(e) => setDescribeMessage(e.target.value)}
+              onKeyDown={handleDescribeKeyDown}
               placeholder="e.g. compare labour and capital"
-              label="Chat"
+              label="Describe"
               size="small"
               autoComplete="off"
               sx={{
@@ -413,21 +413,21 @@ export default function VectorExpressionInput({
             />
 
             <VectorExpressionSubmitButton
-              disabled={chatMessage.trim().length === 0}
-              loading={chatSubmitting}
-              onSubmit={handleChatSubmit}
+              disabled={describeMessage.trim().length === 0}
+              loading={describeSubmitting}
+              onSubmit={handleDescribeSubmit}
             />
           </>
         )}
       </Box>
 
-      {chatError && (
+      {describeError && (
         <Alert
           severity="warning"
-          onClose={() => setChatError(null)}
+          onClose={() => setDescribeError(null)}
           sx={{ py: 0, fontSize: 13 }}
         >
-          {chatError}
+          {describeError}
         </Alert>
       )}
     </Box>

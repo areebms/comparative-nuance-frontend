@@ -2,12 +2,14 @@ import {
   AppBar,
   Toolbar,
   Box,
+  IconButton,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Divider,
 } from "@mui/material";
+import HelpCenterIcon from "@mui/icons-material/HelpCenter";
 import Legend from "./Legend";
 import VectorExpressionInput from "./VectorExpressionInput";
 
@@ -59,8 +61,8 @@ const SortSelect = ({ selectedBookId, sort, onSortChange }) => (
 export default function TopBar({
   expression,
   onExpressionChange,
-  onChatSubmit,
-  chatSubmitting,
+  onDescribeSubmit,
+  describeSubmitting,
   allTerms,
   bookData,
   hiddenBookIds,
@@ -71,6 +73,7 @@ export default function TopBar({
   setSelectedBookId,
   sort,
   onSortChange,
+  onHelpClick,
 }) {
   return (
     <AppBar
@@ -86,36 +89,32 @@ export default function TopBar({
     >
       <Toolbar
         sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            lg: "auto minmax(0, 1fr)",
-          },
-          gap: { xs: 1.5, lg: 2 },
-          alignItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          gap: 1.5,
           width: "100%",
           py: 1,
         }}
       >
-        <LogoBox />
+        {/* ── lg: single horizontal row ── */}
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "minmax(0, 1fr)",
-              lg: "minmax(260px, 1fr) minmax(320px, 1fr)",
-            },
+            display: { xs: "none", lg: "grid" },
+            gridTemplateColumns: "auto minmax(0, 1fr) auto",
             gap: 2,
             alignItems: "center",
-            minWidth: 0,
             width: "100%",
           }}
         >
+          <LogoBox />
           <Box
             sx={{
-              gridColumn: { xs: "1 / -1", lg: "auto" },
+              display: "grid",
+              gridTemplateColumns: "minmax(260px, 1fr) minmax(320px, 1fr)",
+              gap: 2,
+              alignItems: "center",
               minWidth: 0,
+              width: "100%",
             }}
           >
             <Legend
@@ -127,36 +126,55 @@ export default function TopBar({
               selectedBookId={selectedBookId}
               setSelectedBookId={setSelectedBookId}
             />
-          </Box>
-
-          <Box
-            sx={{
-              gridColumn: { xs: "1 / -1", sm: "1 / 2", lg: "auto" },
-              minWidth: 0,
-            }}
-          >
             <VectorExpressionInput
               allTerms={allTerms}
               expression={expression}
               onExpressionChange={onExpressionChange}
-              onChatSubmit={onChatSubmit}
-              chatSubmitting={chatSubmitting}
+              onDescribeSubmit={onDescribeSubmit}
+              describeSubmitting={describeSubmitting}
             />
           </Box>
+          <IconButton onClick={onHelpClick} sx={{ color: "primary.main" }}>
+            <HelpCenterIcon fontSize="large" />
+          </IconButton>
+        </Box>
 
-          {/* <Box
-            sx={{
-              gridColumn: { xs: "1 / -1", sm: "2 / 3", lg: "auto" },
-              minWidth: 0,
-              width: "100%",
-            }}
-          >
-            <SortSelect
-              sort={sort}
-              selectedBookId={selectedBookId}
-              onSortChange={onSortChange}
-            />
-          </Box> */}
+        {/* ── xs: stacked rows ── */}
+        <Box
+          sx={{
+            display: { xs: "flex", lg: "none" },
+            flexDirection: "column",
+            gap: 1.5,
+            width: "100%",
+          }}
+        >
+          {/* Row 1: Logo + Help icon */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <LogoBox />
+            <IconButton onClick={onHelpClick} >
+              <HelpCenterIcon fontSize="large" sx={{ color: "primary.main" }} />
+            </IconButton>
+          </Box>
+
+          {/* Row 2: Input */}
+          <VectorExpressionInput
+            allTerms={allTerms}
+            expression={expression}
+            onExpressionChange={onExpressionChange}
+            onDescribeSubmit={onDescribeSubmit}
+            describeSubmitting={describeSubmitting}
+          />
+
+          {/* Row 3: Legend */}
+          <Legend
+            bookData={bookData}
+            hiddenBookIds={hiddenBookIds}
+            missingBookIds={missingBookIds}
+            onToggleBook={onToggleBook}
+            selectedBooks={selectedBooks}
+            selectedBookId={selectedBookId}
+            setSelectedBookId={setSelectedBookId}
+          />
         </Box>
       </Toolbar>
     </AppBar>

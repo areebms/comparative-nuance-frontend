@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { parseExpression } from "../utils/vectorExpressionParser";
+import { parseExpression, tokenize } from "../utils/vectorExpressionParser";
 import { isTerm, isAfterTermOrClose } from "../utils/vectorExpressionOptions";
 
 export function useVectorExpression(
@@ -9,7 +9,7 @@ export function useVectorExpression(
   const expressionItems = useMemo(() => {
     const trimmed = expression.trim();
     if (!trimmed) return [];
-    return trimmed.split(/\s+/).filter(Boolean);
+    return tokenize(trimmed);
   }, [expression]);
 
   const updateExpressionItems = useCallback(

@@ -13,9 +13,12 @@ import {
 } from "@mui/material";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
-import SimilarityScatterChart from "./components/SimilarityScatterChart";
+import SimilarityScatterChart from "./components/TermSimilarityChart";
 import ResultsTable from "./components/ResultsTable";
-import { useBooks, useTerms, useSimilarityQueries, useParseChatQuery } from "./api/queries";
+import GuideModal from "./components/GuideModal";
+import InfoTooltip from "./components/ResultsTable/InfoTooltip";
+import { labels } from "./content/labels";
+import { useBooks, useTerms, useSimilarityQueries, useParseDescribeQuery } from "./api/queries";
 import useSimilarityData from "./hooks/useSimilarityData";
 import { parseExpression, extractTerms } from "./utils/vectorExpressionParser";
 
@@ -38,15 +41,16 @@ export default function App() {
   const [sort, setSort] = useState("mean");
   const [topN, setTopN] = useState(25);
   const [hiddenBookIds, setHiddenBookIds] = useState(new Set());
+  const [guideOpen, setGuideOpen] = useState(false);
 
   // Data fetching
   const { data: allBooks = [] } = useBooks();
   const { data: allTerms = [] } = useTerms();
 
-  const chatMutation = useParseChatQuery();
+  const describeMutation = useParseDescribeQuery();
 
-  const handleChatSubmit = async (message) => {
-    const result = await chatMutation.mutateAsync(message);
+  const handleDescribeSubmit = async (message) => {
+    const result = await describeMutation.mutateAsync(message);
     setExpression(result.expression);
     return result;
   };
@@ -88,10 +92,8 @@ export default function App() {
   // Heading text
   const expressionLabel = expression.trim() || "...";
   const heading = selectedBookId
-    ? `Terms with most distinctive proximity to '${expressionLabel}' in ${displayedBooks.find((b) => String(b.id) === selectedBookId)?.label}`
-    : sort === "mean"
-      ? `Terms with greatest conceptual proximity to '${expressionLabel}'`
-      : `Terms with most drift in conceptual proximity to '${expressionLabel}'`;
+    ? `Terms with highest relative emphasis for '${expressionLabel}' in ${displayedBooks.find((b) => String(b.id) === selectedBookId)?.label}`
+    : `Terms used in similar contexts to '${expressionLabel}'`;
 
 
   const usedTerms = extractTerms(parsedExpression);
@@ -104,8 +106,8 @@ export default function App() {
         <TopBar
           expression={expression}
           onExpressionChange={setExpression}
-          onChatSubmit={handleChatSubmit}
-          chatSubmitting={chatMutation.isPending}
+          onDescribeSubmit={handleDescribeSubmit}
+          describeSubmitting={describeMutation.isPending}
           allTerms={allTerms}
           bookData={allBooks}
           hiddenBookIds={hiddenBookIds}
@@ -116,6 +118,7 @@ export default function App() {
           setSelectedBookId={setSelectedBookId}
           sort={sort}
           onSortChange={setSort}
+          onHelpClick={() => setGuideOpen(true)}
         />
 
         <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -126,9 +129,9 @@ export default function App() {
           )}
 
           <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {heading}
+                  {heading}
               </Typography>
               <Typography
                 component="a"
@@ -182,6 +185,8 @@ export default function App() {
             />
           </Paper>
         </Container>
+
+        <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
       </Box>
     </ThemeProvider>
   );

@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
-import { linearScale, generateTicks } from "../utils/scales";
+import { linearScale, generateTicks } from "../../utils/scales";
+import { labels } from "../../content/labels";
 import ChartTooltip from "./ChartTooltip";
+import ChartLegend from "./ChartLegend";
 
 const MARGIN = { top: 12, right: 24, bottom: 42, left: 120 };
 const ROW_HEIGHT = 25;
@@ -127,8 +129,10 @@ export default function SimilarityScatterChart({
         <text
           x={MARGIN.left + plotW / 2} y={svgHeight - 4}
           textAnchor="middle" fontSize={13} fontWeight={600} fill="#374151"
+          style={{ cursor: "help" }}
         >
-          Cosine Similarity
+          <title>{`Technical measure: ${labels.contextScore.technical.toLowerCase()}. ${labels.contextScore.tooltip}`}</title>
+          {labels.contextScore.label}
         </text>
 
         {/* Rows */}
@@ -213,23 +217,25 @@ export default function SimilarityScatterChart({
         })}
       </svg>
 
+      <ChartLegend />
+
       {tooltip && (
         <ChartTooltip x={tooltip.x} y={tooltip.y}>
           {tooltip.type === "book" ? (
             <>
               <div style={{ fontWeight: 700 }}>{tooltip.term} -- {tooltip.bookLabel}</div>
-              <div>Similarity: {tooltip.similarity.toFixed(3)}</div>
+              <div>{labels.contextScore.label}: {tooltip.similarity.toFixed(3)}</div>
               {tooltip.similarity_ci && (
-                <div>95% CI: [{tooltip.similarity_ci[0].toFixed(3)}, {tooltip.similarity_ci[1].toFixed(3)}]</div>
+                <div>{labels.confidenceRange.label}: [{tooltip.similarity_ci[0].toFixed(3)}, {tooltip.similarity_ci[1].toFixed(3)}]</div>
               )}
-              <div>z-Score: {tooltip.zScore?.toFixed(3) ?? "N/A"}</div>
+              <div>{labels.relativeEmphasis.technical}: {tooltip.zScore?.toFixed(3) ?? "N/A"}</div>
               <div>Occurrences: {tooltip.count}</div>
             </>
           ) : (
             <>
               <div style={{ fontWeight: 700 }}>{tooltip.term}</div>
-              <div>Mean Similarity: {tooltip.mean.toFixed(3)}</div>
-              <div>Std Dev: {tooltip.std.toFixed(3)}</div>
+              <div>{labels.consensus.label}: {tooltip.mean.toFixed(3)}</div>
+              <div>{labels.divergence.label}: {tooltip.std.toFixed(3)}</div>
             </>
           )}
         </ChartTooltip>

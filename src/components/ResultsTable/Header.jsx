@@ -1,7 +1,7 @@
-import { TableHead, TableRow, TableCell, Box, Tooltip, IconButton } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { darkTooltipProps } from "../ChartTooltip";
-import BOOK_DESCRIPTIONS from "../../utils/bookDescriptions";
+import { TableHead, TableRow, TableCell, Box, Typography } from "@mui/material";
+import InfoTooltip from "./InfoTooltip";
+import { labels } from "../../content/labels";
+import BOOK_DESCRIPTIONS from "../../content/bookDescriptions";
 
 function BookTooltipContent({ book }) {
   const desc = BOOK_DESCRIPTIONS[book.id];
@@ -14,6 +14,19 @@ function BookTooltipContent({ book }) {
   );
 }
 
+function HeaderLabel({ label, technical, tooltip }) {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+      <InfoTooltip title={tooltip}>
+        {label}
+      </InfoTooltip>
+      <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+        {technical}
+      </Typography>
+    </Box>
+  );
+}
+
 export default function Header({ selectedBooks, selectedBookId }) {
   return (
     <TableHead>
@@ -21,30 +34,41 @@ export default function Header({ selectedBooks, selectedBookId }) {
         <TableCell width={50} align="right" sx={{ fontWeight: 700 }}>#</TableCell>
         <TableCell width={220} sx={{ fontWeight: 700 }}>Term</TableCell>
         {selectedBookId && (
-          <TableCell width={140} align="right" sx={{ fontWeight: 700 }}>zScore</TableCell>
+          <TableCell width={200} align="right" sx={{ fontWeight: 700 }}>
+            <HeaderLabel
+              label={labels.relativeEmphasis.label}
+              technical={labels.relativeEmphasis.technical}
+              tooltip={labels.relativeEmphasis.tooltip}
+            />
+          </TableCell>
         )}
-        <TableCell width={150} align="right" sx={{ fontWeight: 700 }}>Consensus (Mean Similarity)</TableCell>
-        <TableCell width={100} align="right" sx={{ fontWeight: 700 }}>Divergence (SD)</TableCell>
+        <TableCell width={150} align="right" sx={{ fontWeight: 700 }}>
+          <HeaderLabel
+            label={labels.consensus.label}
+            technical={labels.consensus.technical}
+            tooltip={labels.consensus.tooltip}
+          />
+        </TableCell>
+        <TableCell width={140} align="right" sx={{ fontWeight: 700 }}>
+          <HeaderLabel
+            label={labels.divergence.label}
+            technical={labels.divergence.technical}
+            tooltip={labels.divergence.tooltip}
+          />
+        </TableCell>
         {selectedBooks.map((book) => (
           <TableCell
             key={book.id}
             align="right"
             sx={{ fontWeight: 700, bgcolor: book.yearColor?.fill, color: book.yearColor?.text }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
-              <span>{book.label}</span>
-              {BOOK_DESCRIPTIONS[book.id] && (
-                <Tooltip title={<BookTooltipContent book={book} />} arrow componentsProps={darkTooltipProps}>
-                  <IconButton
-                    size="small"
-                    aria-label={`About ${book.label}`}
-                    sx={{ color: book.yearColor?.text ?? "text.secondary" }}
-                  >
-                    <InfoOutlinedIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Box>
+            {BOOK_DESCRIPTIONS[book.id] ? (
+              <InfoTooltip title={<BookTooltipContent book={book} />}>
+                {book.label}
+              </InfoTooltip>
+            ) : (
+              book.label
+            )}
           </TableCell>
         ))}
       </TableRow>

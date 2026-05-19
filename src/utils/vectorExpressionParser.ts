@@ -11,7 +11,7 @@ import type { OperationTree } from "../types/vectorExpression";
 
 const TOKEN_PATTERN = /[()+-]|[^\s()+-]+/g;
 
-const tokenize = (expression: string): string[] => expression.match(TOKEN_PATTERN) ?? [];
+export const tokenize = (expression: string): string[] => expression.match(TOKEN_PATTERN) ?? [];
 
 function parseTokens(tokens: string[]): OperationTree | null {
   let cursor = 0;

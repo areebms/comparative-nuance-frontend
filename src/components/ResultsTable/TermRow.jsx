@@ -1,5 +1,22 @@
 import { TableRow, TableCell, Typography, Box, Tooltip } from "@mui/material";
-import { darkTooltipProps } from "../ChartTooltip";
+import { labels } from "../../content/labels";
+
+export const darkTooltipProps = {
+  tooltip: {
+    sx: {
+      bgcolor: "rgba(17,24,39,0.92)",
+      color: "#fff",
+      borderRadius: 1,
+      fontSize: 12,
+      lineHeight: 1.6,
+      px: 1.5,
+      py: 1,
+      maxWidth: 300,
+      "& .MuiTooltip-arrow": { color: "rgba(17,24,39,0.92)" },
+    },
+  },
+};
+
 
 function BookCell({ cellData, term, bookLabel }) {
   if (!cellData) {
@@ -13,9 +30,9 @@ function BookCell({ cellData, term, bookLabel }) {
   const tooltipContent = (
     <Box>
       <Box sx={{ fontWeight: 700, mb: 0.25 }}>{term} -- {bookLabel}</Box>
-      <Box>Similarity: {cellData.similarity.toFixed(3)}</Box>
-      <Box>95% CI: [{cellData.similarity_ci[0].toFixed(3)}, {cellData.similarity_ci[1].toFixed(3)}]</Box>
-      <Box>z-Score: {cellData.zScore?.toFixed(3) ?? "N/A"}</Box>
+      <Box>{labels.contextScore.label}: {cellData.similarity.toFixed(3)}</Box>
+      <Box>{labels.confidenceRange.label}: [{cellData.similarity_ci[0].toFixed(3)}, {cellData.similarity_ci[1].toFixed(3)}]</Box>
+      <Box>{labels.relativeEmphasis.technical}: {cellData.zScore?.toFixed(3) ?? "N/A"}</Box>
       <Box>Occurrences: {cellData.n.toLocaleString()}</Box>
     </Box>
   );

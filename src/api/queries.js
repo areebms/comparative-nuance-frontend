@@ -29,8 +29,8 @@ async function fetchSimilarity(bookId, expression) {
   return res.json();
 }
 
-export async function parseChatQuery(message) {
-  const res = await fetch(`${API_URL}/parse-chat`, {
+export async function parseDescribeQuery(message) {
+  const res = await fetch(`${API_URL}/parse-describe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
@@ -40,7 +40,7 @@ export async function parseChatQuery(message) {
     const detail =
       body?.detail && typeof body.detail === "object"
         ? body.detail.message
-        : body?.detail || `parse-chat: ${res.status}`;
+        : body?.detail || `parse-describe: ${res.status}`;
     throw new Error(detail);
   }
   return res.json();
@@ -108,9 +108,9 @@ export function useSimilarityQueries(bookIds, expression) {
   return { cache, isLoading: anyLoading, isReady: allDone, error };
 }
 
-export function useParseChatQuery() {
+export function useParseDescribeQuery() {
   return useMutation({
-    mutationFn: (message) => parseChatQuery(message),
+    mutationFn: (message) => parseDescribeQuery(message),
   });
 }
 
