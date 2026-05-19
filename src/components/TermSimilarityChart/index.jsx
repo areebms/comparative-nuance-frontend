@@ -1,16 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
+import { linearScale, generateTicks } from "../../utils/scales";
+import { labels } from "../../content/labels";
+import ChartTooltip from "./ChartTooltip";
+import ChartLegend from "./ChartLegend";
 
 const MARGIN = { top: 12, right: 24, bottom: 42, left: 120 };
 const ROW_HEIGHT = 25;
 const MIN_HEIGHT = 400;
-
-function linearScale(domain, range) {
-  const [d0, d1] = domain;
-  const [r0, r1] = range;
-  const m = (r1 - r0) / (d1 - d0);
-  return (v) => r0 + m * (v - d0);
-}
 
 function computeXRange(rows, selectedBooks) {
   const values = [];
@@ -25,9 +22,7 @@ function computeXRange(rows, selectedBooks) {
       }
     });
   });
-
   if (values.length === 0) return { min: 0, max: 1 };
-
   let min = Math.min(...values);
   let max = Math.max(...values);
   const padding = (max - min) * 0.05 || 0.05;
@@ -35,11 +30,6 @@ function computeXRange(rows, selectedBooks) {
     min: Math.max(-1, min - padding),
     max: Math.min(1, max + padding),
   };
-}
-
-function generateTicks(min, max, count = 6) {
-  const step = (max - min) / (count - 1);
-  return Array.from({ length: count }, (_, i) => min + step * i);
 }
 
 export default function SimilarityScatterChart({
@@ -56,9 +46,7 @@ export default function SimilarityScatterChart({
   useEffect(() => {
     if (!containerRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
+      for (const entry of entries) setContainerWidth(entry.contentRect.width);
     });
     ro.observe(containerRef.current);
     return () => ro.disconnect();
@@ -69,10 +57,7 @@ export default function SimilarityScatterChart({
   const plotH = rows.length * ROW_HEIGHT;
 
   const xRange = useMemo(() => computeXRange(rows, selectedBooks), [rows, selectedBooks]);
-  const xScale = useMemo(
-    () => linearScale([xRange.min, xRange.max], [0, plotW]),
-    [xRange, plotW]
-  );
+  const xScale = useMemo(() => linearScale([xRange.min, xRange.max], [0, plotW]), [xRange, plotW]);
   const ticks = useMemo(() => generateTicks(xRange.min, xRange.max), [xRange]);
 
   if (isLoading) {
@@ -93,6 +78,33 @@ export default function SimilarityScatterChart({
     );
   }
 
+  const handleDotHover = (e, row, book, d) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setTooltip({
+      x: e.clientX - (rect?.left ?? 0) + 12,
+      y: e.clientY - (rect?.top ?? 0) - 8,
+      type: "book",
+      term: row.term,
+      bookLabel: book.label,
+      similarity: d.similarity,
+      similarity_ci: d.similarity_ci,
+      zScore: d.zScore,
+      count: d.n,
+    });
+  };
+
+  const handleMeanHover = (e, row) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setTooltip({
+      x: e.clientX - (rect?.left ?? 0) + 12,
+      y: e.clientY - (rect?.top ?? 0) - 8,
+      type: "mean",
+      term: row.term,
+      mean: row.mean,
+      std: row.std,
+    });
+  };
+
   return (
     <Box ref={containerRef} sx={{ position: "relative", width: "100%" }}>
       <svg width={containerWidth} height={svgHeight} style={{ display: "block" }}>
@@ -104,16 +116,9 @@ export default function SimilarityScatterChart({
               <line
                 x1={tx} y1={MARGIN.top}
                 x2={tx} y2={MARGIN.top + plotH}
-                stroke="#e5e7eb"
-                strokeDasharray="4 4"
+                stroke="#e5e7eb" strokeDasharray="4 4"
               />
-              <text
-                x={tx}
-                y={MARGIN.top + plotH + 16}
-                textAnchor="middle"
-                fontSize={11}
-                fill="#6b7280"
-              >
+              <text x={tx} y={MARGIN.top + plotH + 16} textAnchor="middle" fontSize={11} fill="#6b7280">
                 {tick.toFixed(2)}
               </text>
             </g>
@@ -122,14 +127,12 @@ export default function SimilarityScatterChart({
 
         {/* X-axis label */}
         <text
-          x={MARGIN.left + plotW / 2}
-          y={svgHeight - 4}
-          textAnchor="middle"
-          fontSize={13}
-          fontWeight={600}
-          fill="#374151"
+          x={MARGIN.left + plotW / 2} y={svgHeight - 4}
+          textAnchor="middle" fontSize={13} fontWeight={600} fill="#374151"
+          style={{ cursor: "help" }}
         >
-          Cosine Similarity
+          <title>{`Technical measure: ${labels.contextScore.technical.toLowerCase()}. ${labels.contextScore.tooltip}`}</title>
+          {labels.contextScore.label}
         </text>
 
         {/* Rows */}
@@ -144,17 +147,10 @@ export default function SimilarityScatterChart({
               onMouseLeave={() => { setHoveredTerm(null); setTooltip(null); }}
               style={{ opacity: faded ? 0.2 : 1, transition: "opacity 0.15s" }}
             >
-              {/* Loom guideline */}
-              <line
-                x1={MARGIN.left}
-                y1={rowY}
-                x2={MARGIN.left + plotW}
-                y2={rowY}
-                stroke="#edebe6"
-                strokeWidth={0.75}
-              />
+              {/* Row guideline */}
+              <line x1={MARGIN.left} y1={rowY} x2={MARGIN.left + plotW} y2={rowY} stroke="#edebe6" strokeWidth={0.75} />
 
-              {/* Range connector (dotted) */}
+              {/* Range connector */}
               {(() => {
                 const sims = selectedBooks
                   .map((book) => row.byBook[book.id]?.similarity)
@@ -162,44 +158,29 @@ export default function SimilarityScatterChart({
                 if (sims.length < 2) return null;
                 return (
                   <line
-                    x1={MARGIN.left + xScale(Math.min(...sims))}
-                    y1={rowY}
-                    x2={MARGIN.left + xScale(Math.max(...sims))}
-                    y2={rowY}
-                    stroke="#bbb"
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
+                    x1={MARGIN.left + xScale(Math.min(...sims))} y1={rowY}
+                    x2={MARGIN.left + xScale(Math.max(...sims))} y2={rowY}
+                    stroke="#bbb" strokeWidth={1} strokeDasharray="3 3"
                   />
                 );
               })()}
 
-              {/* Per-book CI whiskers */}
+              {/* CI whiskers */}
               {selectedBooks.map((book) => {
                 const d = row.byBook[book.id];
                 if (!d?.similarity_ci) return null;
                 return (
                   <line
                     key={`ci-${book.id}`}
-                    x1={MARGIN.left + xScale(d.similarity_ci[0])}
-                    y1={rowY}
-                    x2={MARGIN.left + xScale(d.similarity_ci[1])}
-                    y2={rowY}
-                    stroke={book.yearColor?.border ?? "#888"}
-                    strokeWidth={1.5}
-                    opacity={0.35}
+                    x1={MARGIN.left + xScale(d.similarity_ci[0])} y1={rowY}
+                    x2={MARGIN.left + xScale(d.similarity_ci[1])} y2={rowY}
+                    stroke={book.yearColor?.border ?? "#888"} strokeWidth={1.5} opacity={0.35}
                   />
                 );
               })}
 
               {/* Y-axis label */}
-              <text
-                x={MARGIN.left - 8}
-                y={rowY}
-                textAnchor="end"
-                dominantBaseline="central"
-                fontSize={12}
-                fill="#374151"
-              >
+              <text x={MARGIN.left - 8} y={rowY} textAnchor="end" dominantBaseline="central" fontSize={12} fill="#374151">
                 {row.term}
               </text>
 
@@ -207,29 +188,14 @@ export default function SimilarityScatterChart({
               {selectedBooks.map((book) => {
                 const d = row.byBook[book.id];
                 if (!d) return null;
-                const cx = MARGIN.left + xScale(d.similarity);
                 const isPinned = selectedBookId === String(book.id);
                 return (
                   <circle
                     key={book.id}
-                    cx={cx}
-                    cy={rowY}
+                    cx={MARGIN.left + xScale(d.similarity)} cy={rowY}
                     r={isPinned ? 5 : 3.5}
                     fill={book.yearColor?.border ?? "#888"}
-                    onMouseEnter={(e) => {
-                      const rect = containerRef.current?.getBoundingClientRect();
-                      setTooltip({
-                        x: e.clientX - (rect?.left ?? 0) + 12,
-                        y: e.clientY - (rect?.top ?? 0) - 8,
-                        type: "book",
-                        term: row.term,
-                        bookLabel: book.label,
-                        similarity: d.similarity,
-                        similarity_ci: d.similarity_ci,
-                        zScore: d.zScore,
-                        count: d.n,
-                      });
-                    }}
+                    onMouseEnter={(e) => handleDotHover(e, row, book, d)}
                     onMouseLeave={() => setTooltip(null)}
                     style={{ cursor: "default" }}
                   />
@@ -239,23 +205,9 @@ export default function SimilarityScatterChart({
               {/* Mean dot */}
               {typeof row.mean === "number" && (
                 <circle
-                  cx={MARGIN.left + xScale(row.mean)}
-                  cy={rowY}
-                  r={6}
-                  fill="#111827"
-                  stroke="white"
-                  strokeWidth={2}
-                  onMouseEnter={(e) => {
-                    const rect = containerRef.current?.getBoundingClientRect();
-                    setTooltip({
-                      x: e.clientX - (rect?.left ?? 0) + 12,
-                      y: e.clientY - (rect?.top ?? 0) - 8,
-                      type: "mean",
-                      term: row.term,
-                      mean: row.mean,
-                      std: row.std,
-                    });
-                  }}
+                  cx={MARGIN.left + xScale(row.mean)} cy={rowY}
+                  r={6} fill="#111827" stroke="white" strokeWidth={2}
+                  onMouseEnter={(e) => handleMeanHover(e, row)}
                   onMouseLeave={() => setTooltip(null)}
                   style={{ cursor: "default" }}
                 />
@@ -265,43 +217,28 @@ export default function SimilarityScatterChart({
         })}
       </svg>
 
-      {/* Tooltip overlay */}
+      <ChartLegend />
+
       {tooltip && (
-        <Box
-          sx={{
-            position: "absolute",
-            left: tooltip.x,
-            top: tooltip.y,
-            background: "rgba(17,24,39,0.92)",
-            color: "#fff",
-            borderRadius: 1,
-            px: 1.5,
-            py: 1,
-            pointerEvents: "none",
-            fontSize: 12,
-            lineHeight: 1.6,
-            whiteSpace: "nowrap",
-            zIndex: 10,
-          }}
-        >
+        <ChartTooltip x={tooltip.x} y={tooltip.y}>
           {tooltip.type === "book" ? (
             <>
-              <div style={{ fontWeight: 700 }}>{tooltip.term} — {tooltip.bookLabel}</div>
-              <div>Similarity: {tooltip.similarity.toFixed(3)}</div>
+              <div style={{ fontWeight: 700 }}>{tooltip.term} -- {tooltip.bookLabel}</div>
+              <div>{labels.contextScore.label}: {tooltip.similarity.toFixed(3)}</div>
               {tooltip.similarity_ci && (
-                <div>95% CI: [{tooltip.similarity_ci[0].toFixed(3)}, {tooltip.similarity_ci[1].toFixed(3)}]</div>
+                <div>{labels.confidenceRange.label}: [{tooltip.similarity_ci[0].toFixed(3)}, {tooltip.similarity_ci[1].toFixed(3)}]</div>
               )}
-              <div>z-Score: {tooltip.zScore?.toFixed(3) ?? "N/A"}</div>
+              <div>{labels.relativeEmphasis.technical}: {tooltip.zScore?.toFixed(3) ?? "N/A"}</div>
               <div>Occurrences: {tooltip.count}</div>
             </>
           ) : (
             <>
-              <div style={{ fontWeight: 700 }}>{tooltip.term} — Overall</div>
-              <div>Mean Similarity: {tooltip.mean.toFixed(3)}</div>
-              <div>Std Dev: {tooltip.std.toFixed(3)}</div>
+              <div style={{ fontWeight: 700 }}>{tooltip.term}</div>
+              <div>{labels.consensus.label}: {tooltip.mean.toFixed(3)}</div>
+              <div>{labels.divergence.label}: {tooltip.std.toFixed(3)}</div>
             </>
           )}
-        </Box>
+        </ChartTooltip>
       )}
     </Box>
   );
