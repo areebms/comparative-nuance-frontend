@@ -16,8 +16,6 @@ import TopBar from "./components/TopBar";
 import SimilarityScatterChart from "./components/TermSimilarityChart";
 import ResultsTable from "./components/ResultsTable";
 import GuideModal from "./components/GuideModal";
-import InfoTooltip from "./components/ResultsTable/InfoTooltip";
-import { labels } from "./content/labels";
 import { useBooks, useTerms, useSimilarityQueries, useParseDescribeQuery } from "./api/queries";
 import useSimilarityData from "./hooks/useSimilarityData";
 import { parseExpression, extractTerms } from "./utils/vectorExpressionParser";

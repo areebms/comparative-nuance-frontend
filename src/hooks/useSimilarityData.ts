@@ -34,7 +34,6 @@ export default function useSimilarityData({
       tableData: [],
       bookCalculationStats: {},
       termCount: 0,
-      sharedTerms: [],
     };
 
     if (!selectedBookIds?.length) return empty;
@@ -98,7 +97,11 @@ export default function useSimilarityData({
     const stats: Record<number, TooltipData> = {};
     for (const id of validBookIds) {
       const total = bookSimilarityData[id].length;
-      stats[id] = { total, removed: total - validRows.length, shown: topN };
+      stats[id] = {
+        total,
+        removed: total - validRows.length,
+        shown: Math.min(topN, validRows.length),
+      };
     }
 
     return {
