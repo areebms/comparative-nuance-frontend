@@ -2,7 +2,7 @@
 
 A React/TypeScript application that turns a complex ML backend into a usable research workflow.
 
-Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and compare results across authors through custom SVG charts with 95% confidence intervals. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
+Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and trace how those expressions drift across authors through a custom SVG chart with 95% confidence intervals. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
 
 **Live demo:** https://www.embedding-analytics.com
 **Backend repo:** https://github.com/areebms/embedding-analytics
@@ -12,11 +12,11 @@ Users compose structured vector queries via a chip-based expression builder, tra
 ## Engineering highlights
 
 - **Typed expression model:** Custom parser, hooks, and TypeScript types manage structured vector expressions as first-class state, not raw strings
-- **Two-phase data fetching:** TanStack Query orchestrates a fast Pinecone-backed ranking request per book, then a dependent confidence-interval request scoped to only the returned terms, merged into a single result shape downstream
-- **Custom SVG data visualization:** Hand-built scatter chart with confidence-interval whiskers, ResizeObserver-driven responsive sizing, and chronological color coding, no charting library
+- **Single-request chart data:** TanStack Query fetches the whole chart — the query's line, its neighbour lines, and every book's series — in one request, cached by expression and pinned book so editing and reverting a query costs nothing
+- **Data visualization:** Multi-line drift chart on Recharts, read as focus + context — the query is the thick focal line with a shaded confidence band, its neighbours are thin lines that connect only on hover, and each is named by an on-chart label in place of a legend. Where a book never uses a term the line breaks rather than interpolating across it
 - **LLM-assisted input with human-in-the-loop:** Describe mode translates natural language into editable expression chips so the user always verifies the AI output before relying on it
 - **Responsive layout:** Single-row desktop topbar collapses into a stacked mobile layout without sacrificing functionality
-- **Product-facing technical UX:** Plain-language labels paired with technical subtitles (cosine similarity, standard deviation, z-score) make the interface approachable without hiding the analysis
+- **Product-facing technical UX:** Plain-language metric names carry the statistics alongside them (95% CI, seed counts) so the interface stays approachable without hiding the analysis
 
 ---
 
@@ -26,9 +26,8 @@ Users compose structured vector queries via a chip-based expression builder, tra
 |---|---|
 | Framework | React, TypeScript, Vite |
 | UI | MUI, custom SVG charts |
-| Data fetching | TanStack Query (parallel and dependent queries, mutations) |
+| Data fetching | TanStack Query (queries, mutations) |
 | State | Custom hooks, typed expression parser |
-| Stats | simple-statistics (mean, standard deviation, z-score) |
 | Backend | FastAPI on AWS Lambda (separate repo) |
 
 ---
@@ -51,21 +50,19 @@ A plain-English input that translates to a vector expression through the backend
 
 The user never stays in describe mode after submitting. It is a translation step, not a conversation.
 
-### Confidence-scored scatter chart
+### Diachronic drift chart
 
-Custom SVG chart where each row is a term, each dot is a book's similarity score, and horizontal whiskers show 95% confidence intervals from the backend model ensemble. Books are color-coded chronologically (warm to cool). The chart resizes via ResizeObserver and makes uncertainty visible rather than hiding it behind a single number.
+Recharts line chart with books along the x-axis in publication order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is how closely that term keeps the same company in each book, with a shaded 95% confidence band from the backend model ensemble. The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
 
-### Results table
+A line that drifts as it moves right is a term keeping different company in later books than earlier ones.
 
-Sortable metrics with plain-language labels and technical subtitles:
+### Drift table
 
-- **Consensus** (mean similarity): average score across selected books
-- **Divergence** (standard deviation): how much books disagree
-- **Relative emphasis** (z-score): visible when a single book is pinned, showing where that author's usage departs from the group
+The numbers behind the chart, reusing the chart's own series selector so every row maps to a mark above. Pinned, one row per neighbour line; unpinned, one row per book.
 
-### Book legend and pinning
+### Book rail and pinning
 
-Toggle books on/off or pin a single author to re-rank by that book's relative emphasis. Color assignments derive from publication year, naturally supporting chronological comparison.
+Pin a single author to read every line relative to that book; with nothing pinned, each book is scored against the mean of its peers instead. Books with no data for the current expression are greyed out and unpinnable. Color assignments derive from publication year, naturally supporting chronological comparison.
 
 ### Guide modal
 
@@ -81,33 +78,45 @@ More detail on how users interact with these features: [user guide in the backen
 
 ## Data flow
 
-Similarity results arrive in two phases per book, mirroring the backend's split between fast ranking and ensemble confidence scoring:
+One request draws the whole chart. `useSemanticDrift` posts the parsed expression to `/semantic-drift/{source_book_id}` when a book is pinned, or `/semantic-drift` when none is, and gets back the same `SemanticDriftResponse` either way:
 
-1. **Quick phase:** `POST /similar-terms/quick/{book_id}` fires in parallel for every visible book, returning the top-ranked terms and the per-seed query vectors.
-2. **Detailed phase:** once every quick query succeeds, a dependent `POST /similar-terms/detailed/{book_id}/` fires per book with the returned terms and query vectors, fetching 95% confidence intervals for only those terms.
+- `expr` — the query's own line (`{ expr, terms, books }`)
+- `nearest_terms` — one neighbour line each; how many is the server's call
+- `books` — the roster: every book the request named, measured or not
 
-`useSimilarityQueries` coordinates both phases with TanStack `useQueries`, gating the detailed queries on quick-phase success and merging the two responses into the `{ term, count, similarity, similarity_ci }` shape the chart and table consume. Each phase is cached independently by expression and book, so editing an expression and reverting costs nothing.
+The response is already one row per **term**, which is what the chart draws, so it is consumed as-is rather than reshaped. Absence is expressed by omission: a book appears on a line only if that line measured it, so `series.ts` derives each line's gaps by walking the roster.
+
+The pinned book is excluded from the request — its agreement with itself is a constant 1.0, which carries no information, would compress the real variation into half the y-range, and is rejected by the API with a 422.
+
+A 404 is one of two **results**, not failures, and they are told apart by `reason`:
+
+| `reason` | meaning |
+| --- | --- |
+| `expression_absent` | the pinned book's vocabulary lacks a leaf of the expression (carries `book_id` and the missing `terms`) |
+| `query_in_too_few_books` | fewer than two books carry the query — reachable while unpinned, where `book_id` is `null` |
+
+Both render as an `info` alert naming the actual book and words. `src/api/errors.ts` holds the `ApiError` carrier and the composers that turn one into a sentence; structure and copy are separate because naming a book needs the corpus, which the fetch layer does not have.
+
+**Nothing is ever retried.** The backend runs heavy synchronous work on a single worker, so a retry doubles load on an already-stuck server and delays the error the reader needs. `main.tsx` turns off `retry`, `retryOnMount`, `refetchOnWindowFocus` and `refetchOnReconnect` globally, and no query overrides it. Responses are cached by expression, pinned book and target set.
 
 ```mermaid
 flowchart TD
     User[User] --> Input[VectorExpressionInput]
     Input --> Parser[Expression parser + validation]
     Input --> Describe[Describe mode mutation]
-    Parser --> Quick[Quick similarity queries]
+    Parser --> Chart_Q[Diachronic chart query]
     Describe --> API[FastAPI backend]
-    Quick --> API
-    Quick --> Detailed[Detailed CI queries]
-    Detailed --> API
-    API --> Chart[Confidence-scored scatter chart]
-    API --> Table[Results table]
-    API --> Legend[Book legend + pinning]
+    Chart_Q --> API
+    API --> Chart[Drift chart]
+    API --> Table[Drift table]
+    API --> Rail[Book rail + pinning]
 ```
 
 Product workflow:
 
 1. Build or describe an expression
 2. Validate and normalize into typed expression state
-3. Request ranked similarity, then confidence intervals, for each visible book in parallel
+3. Request the whole chart for the current expression and pinned book
 4. Render uncertainty-aware chart and table views
 5. Refine the query without losing context
 
@@ -120,36 +129,35 @@ src/
 ├── App.jsx
 ├── main.tsx
 ├── api/
-│   └── queries.js                  # TanStack Query hooks: two-phase similarity, books, terms, describe
+│   ├── queries.ts                  # TanStack Query hooks: semantic drift, books, terms, describe
+│   └── errors.ts                   # ApiError carrier + the composers that turn one into copy
 ├── components/
-│   ├── ResultsTable/
+│   ├── DiachronicChart/
+│   │   ├── index.jsx               # The Recharts chart itself
+│   │   ├── series.ts               # Payload -> one series per term; shared with DriftTable
+│   │   ├── chartModel.ts           # Series -> Recharts rows, domains, ticks
+│   │   ├── marks.jsx               # The two custom marks: dots and on-chart term labels
+│   │   ├── palette.ts
+│   │   └── SeriesSwatch.jsx
+│   ├── HighlightBar/
 │   │   ├── index.jsx
-│   │   ├── Header.jsx
-│   │   ├── TermRow.jsx
-│   │   ├── PinnedMetaRows.jsx
-│   │   └── InfoTooltip.jsx
-│   ├── TermSimilarityChart/
-│   │   ├── index.jsx
-│   │   ├── ChartLegend.jsx
-│   │   └── ChartTooltip.jsx
+│   │   └── BookChip.jsx
 │   ├── TopBar/
 │   │   ├── index.jsx
-│   │   ├── VectorExpressionInput.tsx
-│   │   ├── Legend.jsx
-│   │   └── BookChip.jsx
+│   │   └── VectorExpressionInput.tsx
+│   ├── DriftTable.jsx
+│   ├── CenteredMessage.jsx
 │   └── GuideModal.jsx
 ├── content/
-│   ├── bookDescriptions.js
-│   └── labels.ts                   # All UI copy, tooltips, technical subtitles
+│   └── labels.ts                   # The copy the chart and the table must keep identical
 ├── hooks/
-│   ├── useSimilarityData.ts        # Aggregation: consensus, divergence, z-scores
-│   ├── useVectorExpression.ts
-│   └── useContainerWidth.ts
+│   ├── useUrlState.ts              # Expression in ?q, pinned book in the path
+│   └── useVectorExpression.ts
 ├── types/
+│   ├── api.ts                      # Mirrors the backend's pydantic schemas
 │   └── vectorExpression.ts
 └── utils/
-    ├── chart.js
-    ├── scales.js
+    ├── scales.ts                   # Year ticks + the chronological colour ramp
     ├── vectorExpressionOptions.ts
     └── vectorExpressionParser.ts
 ```
@@ -167,10 +175,41 @@ Set `VITE_API_URL` to point at the backend API (local or deployed).
 
 ---
 
+## Deployment (AWS Amplify Hosting)
+
+The build itself is driven by `amplify.yml`. One piece of configuration lives
+outside it: the SPA rewrite.
+
+The app puts the pinned book in the URL **path** (`/overview/3`), so those
+paths must reach `index.html` for the
+client router to handle them. Amplify serves static objects, so without a
+rewrite it looks for an object at that key, finds none, and 404s — every
+shareable link and every refresh away from `/` fails in production, while
+`npm run dev` works fine because Vite serves `index.html` for any path.
+
+Amplify redirects are app-level settings, not build settings, so they cannot be
+declared in `amplify.yml`. The rule is checked in as `amplify-redirects.json`
+(it matches every path with no file extension, leaving real asset requests
+alone). Apply it once per Amplify app, either way:
+
+```bash
+aws amplify update-app \
+  --app-id "$AMPLIFY_APP_ID" \
+  --custom-rules "$(cat amplify-redirects.json)"
+```
+
+or in the console: **Hosting → Rewrites and redirects → Manage redirects →**
+open the JSON editor and paste the file's contents.
+
+Verify after deploying by loading `https://<domain>/overview/3300` directly (not by
+navigating to it from `/`) — it should render the app, not a 404.
+
+---
+
 ## What this demonstrates
 
 - Building a product frontend for an AI/ML backend, not just rendering API responses
-- Orchestrating dependent multi-phase API requests with TanStack Query while keeping a single clean data contract for the UI
+- Modelling a chart's entire data contract as one cached request, keyed so that editing and reverting a query is free
 - Designing custom SVG data visualizations that expose uncertainty and support comparison
 - Implementing a typed expression model with parsing, validation, and structured state
 - Creating an LLM-assisted input flow with human-in-the-loop verification

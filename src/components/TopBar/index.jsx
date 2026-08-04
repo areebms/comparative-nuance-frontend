@@ -1,10 +1,12 @@
 import { AppBar, Toolbar, Box, IconButton, Divider } from "@mui/material";
 import HelpCenterIcon from "@mui/icons-material/HelpCenter";
 import VectorExpressionInput from "./VectorExpressionInput";
+import NearestTermsSort from "./NearestTermsSort";
 
 const LogoBox = () => (
   <Box
     sx={{
+      gridArea: "logo",
       display: "flex",
       alignItems: "center",
       gap: 2,
@@ -35,9 +37,10 @@ const LogoBox = () => (
 export default function TopBar({
   expression,
   onExpressionChange,
+  sort,
+  onSortChange,
   onDescribeSubmit,
   describeSubmitting,
-  allTerms,
   onHelpClick,
 }) {
   return (
@@ -52,65 +55,56 @@ export default function TopBar({
         borderColor: "divider",
       }}
     >
-      <Toolbar
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.5,
-          width: "100%",
-          py: 1,
-        }}
-      >
-        {/* ── lg: single horizontal row ── */}
+      <Toolbar sx={{ width: "100%", py: 1 }}>
+        {/* ONE tree for both layouts, rearranged by grid areas rather than
+            written twice and toggled with `display`. Two copies would each hold
+            their own VectorExpressionInput state -- draft expression, input
+            mode, describe notice -- so crossing the breakpoint would swap in
+            whatever the hidden copy was last left with. */}
         <Box
           sx={{
-            display: { xs: "none", lg: "grid" },
-            gridTemplateColumns: "auto minmax(0, 1fr) auto",
-            gap: 2,
-            alignItems: "center",
+            display: "grid",
             width: "100%",
+            alignItems: "center",
+            columnGap: 2,
+            rowGap: 1.5,
+            // The expression input is the one thing that must be able to grow,
+            // so it keeps the only flexible track; the sort control takes its
+            // own `auto` track rather than sharing, so it holds its width.
+            gridTemplateColumns: {
+              xs: "minmax(0, 1fr) auto",
+              lg: "auto minmax(0, 1fr) auto auto",
+            },
+            // Narrow: logo and help share a row, then the input, then the sort
+            // control on its own row -- at these widths the input is already
+            // the tightest thing on screen. Wide: a single horizontal row.
+            gridTemplateAreas: {
+              xs: `"logo help" "input input" "sort sort"`,
+              lg: `"logo input sort help"`,
+            },
           }}
         >
           <LogoBox />
-          <Box sx={{ width: "100%", minWidth: 0 }}>
+
+          <Box sx={{ gridArea: "input", minWidth: 0 }}>
             <VectorExpressionInput
-              allTerms={allTerms}
               expression={expression}
               onExpressionChange={onExpressionChange}
               onDescribeSubmit={onDescribeSubmit}
               describeSubmitting={describeSubmitting}
             />
           </Box>
-          <IconButton onClick={onHelpClick} sx={{ color: "primary.main" }}>
-            <HelpCenterIcon fontSize="large" />
-          </IconButton>
-        </Box>
 
-        {/* ── xs: stacked rows ── */}
-        <Box
-          sx={{
-            display: { xs: "flex", lg: "none" },
-            flexDirection: "column",
-            gap: 1.5,
-            width: "100%",
-          }}
-        >
-          {/* Row 1: Logo + Help icon */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <LogoBox />
-            <IconButton onClick={onHelpClick} >
-              <HelpCenterIcon fontSize="large" sx={{ color: "primary.main" }} />
-            </IconButton>
+          <Box sx={{ gridArea: "sort", justifySelf: "end" }}>
+            <NearestTermsSort sort={sort} onSortChange={onSortChange} />
           </Box>
 
-          {/* Row 2: Input */}
-          <VectorExpressionInput
-            allTerms={allTerms}
-            expression={expression}
-            onExpressionChange={onExpressionChange}
-            onDescribeSubmit={onDescribeSubmit}
-            describeSubmitting={describeSubmitting}
-          />
+          <IconButton
+            onClick={onHelpClick}
+            sx={{ gridArea: "help", justifySelf: "end", color: "primary.main" }}
+          >
+            <HelpCenterIcon fontSize="large" />
+          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>
