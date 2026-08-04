@@ -4,7 +4,6 @@ import type { DriftSort } from "../types/api";
 export const labels = {
   typicality: {
     label: "Definition Genericness",
-    short: "Genericness",
     pinned: (bookLabel: string) => `Neighbourhood agreement with ${bookLabel}`,
   },
 
@@ -38,12 +37,9 @@ export const labels = {
   },
 
   columns: {
-    occurrences: {
-      short: "Uses",
-      help:
-        "How often the term's own words appear in this book -- every word of " +
-        "a compound expression counted together. The volume of text the score " +
-        "rests on, not its confidence.",
+    similarity: {
+      short: "Similarity",
+      help: "Mean Similarity",
     },
     trend: {
       short: "Trend",

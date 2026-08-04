@@ -14,6 +14,7 @@ import {
 import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
 import HighlightBar from "./components/HighlightBar";
+import DriftTable from "./components/DriftTable";
 import CenteredMessage from "./components/CenteredMessage";
 import {
   useBooks,
@@ -146,9 +147,29 @@ export default function App() {
           )}
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {heading}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {heading}
+              </Typography>
+              <Typography
+                component="a"
+                href="#results-table"
+                sx={{
+                  fontSize: 13,
+                  color: "text.secondary",
+                  textDecoration: "none",
+                  "&:hover": { textDecoration: "underline" },
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document
+                    .getElementById("results-table")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                Table &rarr;
+              </Typography>
+            </Box>
           </Box>
 
           <Box
@@ -188,6 +209,14 @@ export default function App() {
               </Box>
             </Paper>
           </Box>
+
+          <Paper
+            id="results-table"
+            elevation={0}
+            sx={{ p: 3, borderRadius: 3 }}
+          >
+            <DriftTable payload={driftPayload} allBooks={allBooks} sort={sort} />
+          </Paper>
         </Container>
 
         {guideMounted && (

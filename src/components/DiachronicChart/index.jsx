@@ -83,7 +83,8 @@ export default function DiachronicChart({
   // term's line and dims every other series.
   const [activeTerm, setActiveTerm] = useState(null);
 
-  // Pass refBook so the pinned reference is re-added as a self-agreement
+  // Shared selector, so the DriftTable below tabulates exactly what this chart
+  // plots. Pass refBook so the pinned reference is re-added as a self-agreement
   // (1.0) marker on every line, and joins the roster the x-axis is built from.
   const { series, roster, missingEverywhere } = useMemo(
     () => buildDiachronicSeries(payload, allBooks, refBook),

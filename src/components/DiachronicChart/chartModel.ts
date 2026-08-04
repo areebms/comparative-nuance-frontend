@@ -33,7 +33,7 @@ export interface ChartModel {
  * One row per ROSTER book, keyed by book id rather than by year, so two books
  * published in the same year are two rows sharing an x position -- not one row
  * where the later book overwrites the earlier one and vanishes from the chart
- * while still appearing in the rail.
+ * while still appearing in the rail and the drift table.
  *
  * Each term's numbers live under `values`, one level down from the row's own
  * fields, because a term is arbitrary corpus text: written flat onto the row, a

@@ -28,8 +28,9 @@ export interface SeriesPoint {
   similarity_ci: [number, number] | null;
   /**
    * The wire row this point was built from, carried whole rather than copied
-   * field by field. Null on the synthetic self-agreement point, which was
-   * measured by nobody.
+   * field by field: the chart needs only the two projections above, while the
+   * table reports the evidence behind them (`count`, `n_seeds`). Null on the
+   * synthetic self-agreement point, which was measured by nobody.
    */
   measurement: BookLocalMeanSimilarity | null;
 }
@@ -87,7 +88,9 @@ export interface DiachronicSeries {
 }
 
 /**
- * Turn a SemanticDriftResponse into the per-TERM series the chart draws.
+ * Turn a SemanticDriftResponse into the per-TERM series the chart draws — and
+ * the DriftTable tabulates. Both surfaces call this, so a row in the table
+ * always corresponds to a line/dot in the chart above it.
  *
  * The response is already term-oriented, which is why there is no pivot here:
  *   expr          — the query's own line ({ expr, terms, books })
@@ -101,8 +104,8 @@ export interface DiachronicSeries {
  * Absence is expressed by omission — there is no `unavailable` flag on the
  * wire. A book is on a line only if that line measured it, so a line's gaps are
  * exactly the roster books missing from its own `books` list. We still emit
- * `unavailable: true` on those, because that is the shape the chart already
- * reads.
+ * `unavailable: true` on those, because that is the shape the chart and table
+ * already read.
  *
  * Deriving gaps this way rather than reading the roster's own `missing_terms`
  * is deliberate, and strictly more correct: a book drops off a line whenever
@@ -114,11 +117,15 @@ export interface DiachronicSeries {
  * `pinnedBook` (optional): the reference book is never among the targets — its
  * agreement with itself is a constant 1.0 (see queries.ts). When a caller passes
  * it back in, that 1.0 point is re-added to every surviving line so the
- * reference appears as a marker at its own year.
+ * reference appears as a marker at its own year. Only the chart opts in; the
+ * DriftTable omits it, so the table keeps a column only per book actually
+ * measured (an all-1.000 column would carry no information).
  *
  * Colours: the query term gets the deep-blue focal ink (QUERY_COLOR); each
  * neighbour cycles through the categorical SERIES_COLORS palette, so every
  * term (dot, on-chart label, and connecting line) is its own distinct colour.
+ * Both the chart and the table read `s.color`, so the table's swatches match
+ * the chart's lines exactly.
  */
 export function buildDiachronicSeries(
   payload: SemanticDriftResponse | null,
@@ -135,10 +142,10 @@ export function buildDiachronicSeries(
 
   // The roster is the x-axis universe. Books the corpus no longer knows about
   // are dropped rather than plotted as anonymous ids. Sorted here once, so
-  // every consumer (points, gaps, chart rows) reads the same chronology —
-  // including the label tiebreak, so two books published in the same year
-  // have a stable order rather than one that depends on which term happened
-  // to mention them first.
+  // every consumer (points, gaps, chart rows, table columns) reads the same
+  // chronology — including the label tiebreak, so two books published in the
+  // same year have a stable order rather than one that depends on which term
+  // happened to mention them first.
   const roster = payload.books
     .filter((summary) => bookMap.has(summary.id))
     .map((summary) => bookMap.get(summary.id)!)
@@ -283,8 +290,8 @@ function gapCause(missingTerms: string[], summary: BookSummary | undefined): Gap
 }
 
 // Points/gaps carry a flat `year`; roster entries are raw books with
-// `published_year`. Both tiebreak on label so same-year books never swap
-// order in the chart's rows.
+// `published_year`. Both tiebreak on label so same-year books never swap order
+// between the chart's rows and the table's columns.
 const byYear = (a: { year: number; label: string }, b: { year: number; label: string }) =>
   a.year - b.year || a.label.localeCompare(b.label);
 
