@@ -1,16 +1,5 @@
-import {
-  AppBar,
-  Toolbar,
-  Box,
-  IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Divider,
-} from "@mui/material";
+import { AppBar, Toolbar, Box, IconButton, Divider } from "@mui/material";
 import HelpCenterIcon from "@mui/icons-material/HelpCenter";
-import Legend from "./Legend";
 import VectorExpressionInput from "./VectorExpressionInput";
 
 const LogoBox = () => (
@@ -43,36 +32,12 @@ const LogoBox = () => (
   </Box>
 );
 
-const SortSelect = ({ selectedBookId, sort, onSortChange }) => (
-  <FormControl size="small" sx={{ width: "100%" }}>
-    <InputLabel>Sort</InputLabel>
-    <Select
-      disabled={!!selectedBookId}
-      value={selectedBookId ? "elasticity" : sort}
-      label="Sort"
-      onChange={(e) => onSortChange(e.target.value)}
-    >
-      <MenuItem value="mean">Consensus (Mean)</MenuItem>
-      <MenuItem value="elasticity">Divergence (SD)</MenuItem>
-    </Select>
-  </FormControl>
-);
-
 export default function TopBar({
   expression,
   onExpressionChange,
   onDescribeSubmit,
   describeSubmitting,
   allTerms,
-  bookData,
-  hiddenBookIds,
-  missingBookIds,
-  onToggleBook,
-  selectedBooks = [],
-  selectedBookId,
-  setSelectedBookId,
-  sort,
-  onSortChange,
   onHelpClick,
 }) {
   return (
@@ -107,25 +72,7 @@ export default function TopBar({
           }}
         >
           <LogoBox />
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "minmax(260px, 1fr) minmax(320px, 1fr)",
-              gap: 2,
-              alignItems: "center",
-              minWidth: 0,
-              width: "100%",
-            }}
-          >
-            <Legend
-              bookData={bookData}
-              hiddenBookIds={hiddenBookIds}
-              missingBookIds={missingBookIds}
-              onToggleBook={onToggleBook}
-              selectedBooks={selectedBooks}
-              selectedBookId={selectedBookId}
-              setSelectedBookId={setSelectedBookId}
-            />
+          <Box sx={{ width: "100%", minWidth: 0 }}>
             <VectorExpressionInput
               allTerms={allTerms}
               expression={expression}
@@ -163,17 +110,6 @@ export default function TopBar({
             onExpressionChange={onExpressionChange}
             onDescribeSubmit={onDescribeSubmit}
             describeSubmitting={describeSubmitting}
-          />
-
-          {/* Row 3: Legend */}
-          <Legend
-            bookData={bookData}
-            hiddenBookIds={hiddenBookIds}
-            missingBookIds={missingBookIds}
-            onToggleBook={onToggleBook}
-            selectedBooks={selectedBooks}
-            selectedBookId={selectedBookId}
-            setSelectedBookId={setSelectedBookId}
           />
         </Box>
       </Toolbar>

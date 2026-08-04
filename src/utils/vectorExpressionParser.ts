@@ -52,28 +52,3 @@ export function parseExpression(input: string): OperationTree | null {
   const expression = input.trim();
   return expression ? parseTokens(tokenize(expression)) : null;
 }
-
-/**
- * Extracts all term strings from a parsed OperationTree.
- */
-export function extractTerms(tree: OperationTree | null): string[] {
-  if (!tree) return [];
-  const terms = [];
-  const stack = [tree];
-
-  while (stack.length) {
-    const node = stack.pop();
-    if (!node) continue;
-    if ("term" in node) {
-      terms.push(node.term);
-      continue;
-    }
-    if (node.args) {
-      for (let i = node.args.length - 1; i >= 0; i--) {
-        stack.push(node.args[i]);
-      }
-    }
-  }
-
-  return terms;
-}
