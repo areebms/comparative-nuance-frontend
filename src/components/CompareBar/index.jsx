@@ -2,7 +2,7 @@ import { Stack, Typography } from "@mui/material";
 import BookChip from "./BookChip";
 
 
-export default function HighlightBar({
+export default function CompareBar({
   bookData,
   missingBookIds,
   selectedBookId,
@@ -20,7 +20,6 @@ export default function HighlightBar({
           <BookChip
             key={book.id}
             label={book.label}
-            yearColor={book.yearColor}
             selected={selected}
             active={active}
             clickable={selected || (active && bookData.length > 1)}

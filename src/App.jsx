@@ -9,13 +9,12 @@ import {
   ThemeProvider,
   createTheme,
   IconButton,
-  CircularProgress,
 } from "@mui/material";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
-import HighlightBar from "./components/HighlightBar";
+import CompareBar from "./components/CompareBar";
 import DriftTable from "./components/DriftTable";
-import CenteredMessage from "./components/CenteredMessage";
+import DiachronicChart from "./components/DiachronicChart";
 import {
   useBooks,
   useSemanticDrift,
@@ -25,9 +24,6 @@ import {
 import { describeDriftError } from "./api/errors";
 import useUrlState from "./hooks/useUrlState";
 import { parseExpression } from "./utils/vectorExpressionParser";
-import { CHART_HEIGHT } from "./components/DiachronicChart/layout";
-
-const DiachronicChart = lazy(() => import("./components/DiachronicChart"));
 
 const GuideModal = lazy(() => import("./components/GuideModal"));
 
@@ -181,7 +177,7 @@ export default function App() {
               mb: 2,
             }}
           >
-            <HighlightBar
+            <CompareBar
               bookData={displayedBooks}
               missingBookIds={missingBookIds}
               selectedBookId={pinnedBookId}
@@ -190,22 +186,14 @@ export default function App() {
 
             <Paper elevation={0} sx={{ flex: 1, minWidth: 0, borderRadius: 3 }}>
               <Box sx={{ p: 3 }}>
-                <Suspense
-                  fallback={
-                    <CenteredMessage height={CHART_HEIGHT}>
-                      <CircularProgress />
-                    </CenteredMessage>
-                  }
-                >
-                  <DiachronicChart
-                    payload={driftPayload}
-                    refBook={refBook}
-                    term={expression.trim()}
-                    isLoading={driftLoading}
-                    hasError={Boolean(driftAlert)}
-                    allBooks={allBooks}
-                  />
-                </Suspense>
+                <DiachronicChart
+                  payload={driftPayload}
+                  refBook={refBook}
+                  term={expression.trim()}
+                  isLoading={driftLoading}
+                  hasError={Boolean(driftAlert)}
+                  allBooks={allBooks}
+                />
               </Box>
             </Paper>
           </Box>

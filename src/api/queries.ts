@@ -1,13 +1,11 @@
 import { useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { stringifyExpression } from "../utils/vectorExpressionParser";
-import { yearToColor } from "../utils/scales";
 import { ApiError, unwrapReason } from "./errors";
 import type { ErrorKind } from "./errors";
 import type { OperationTree } from "../types/vectorExpression";
 import { DEFAULT_DRIFT_SORT } from "../types/api";
 import type {
-  Book,
   BookResponse,
   DriftSort,
   ParseDescribeResponse,
@@ -65,22 +63,14 @@ function postJson<T>(path: string, payload: unknown, opts?: RequestOptions) {
   });
 }
 
-const selectBooks = (books: BookResponse[]): Book[] => {
-  const sorted = [...books].sort((a, b) => a.published_year - b.published_year);
-  const years = sorted.map((b) => b.published_year);
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
-  return sorted.map((book) => ({
-    ...book,
-    yearColor: yearToColor(book.published_year, minYear, maxYear),
-  }));
-};
+const selectBooks = (books: BookResponse[]): BookResponse[] =>
+  [...books].sort((a, b) => a.published_year - b.published_year);
 
 const selectTerms = (terms: TermResponse[]): TermResponse[] =>
   [...terms].sort((a, b) => b.books.length - a.books.length);
 
 export function useBooks() {
-  return useQuery<BookResponse[], ApiError, Book[]>({
+  return useQuery<BookResponse[], ApiError, BookResponse[]>({
     queryKey: ["books"],
     queryFn: () => request<BookResponse[]>("/books"),
     staleTime: Infinity,

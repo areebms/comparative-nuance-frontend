@@ -38,4 +38,5 @@ export const INK = {
   axis: "#c3c2b7", // baseline / axis line
   tick: "#6b7280", // tick labels
   title: "#374151", // axis titles
+  surface: "#fff", // what the chart sits on -- the term labels' halo
 };

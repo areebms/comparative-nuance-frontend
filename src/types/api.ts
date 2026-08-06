@@ -1,5 +1,4 @@
 import type { OperationTree } from "./vectorExpression";
-import type { YearColor } from "../utils/scales";
 
 export interface BookResponse {
   id: number;
@@ -7,10 +6,6 @@ export interface BookResponse {
   author: string;
   title: string;
   published_year: number;
-}
-
-export interface Book extends BookResponse {
-  yearColor: YearColor;
 }
 
 export interface TermResponse {

@@ -1,5 +1,5 @@
 import type {
-  Book,
+  BookResponse,
   Reason,
   ReasonBody,
   ExpressionAbsentResponse,
@@ -61,7 +61,11 @@ export function describeDriftError(
     books = [],
     refBook = null,
     queryLabel = "",
-  }: { books?: Book[]; refBook?: Book | null; queryLabel?: string } = {},
+  }: {
+    books?: BookResponse[];
+    refBook?: BookResponse | null;
+    queryLabel?: string;
+  } = {},
 ): DriftAlert {
   const labelOf = (id: number | null | undefined) =>
     books.find((b) => b.id === id)?.label ?? null;

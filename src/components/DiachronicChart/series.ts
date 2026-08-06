@@ -1,168 +1,41 @@
 import { SERIES_COLORS, QUERY_COLOR } from "./palette";
 import { LOCAL_ANCHOR_FLOOR } from "../../types/api";
 import type {
-  Book,
-  BookLocalMeanSimilarity,
+  BookResponse,
   BookSummary,
   SemanticDriftResponse,
-  TermData,
 } from "../../types/api";
-import type { YearColor } from "../../utils/scales";
+import type {
+  ChartModel,
+  ChartRow,
+  DiachronicSeries,
+  GapCause,
+  Series,
+  SeriesGap,
+  SeriesPoint,
+} from "./types";
 
-/**
- * A book on a line, with that line's measurement of it. The term is NOT on the
- * point: it belongs to the enclosing Series, and restating it here would read
- * as though the two could disagree.
- */
-export interface SeriesPoint {
-  id: number;
-  label: string;
-  year: number;
-  yearColor: YearColor;
-  similarity: number;
-  /**
-   * Absolute [lo, hi]. Non-null for everything that came off the wire --
-   * BookLocalMeanSimilarity requires it -- and null ONLY on the synthetic
-   * pinned self-agreement point below, which has no interval to draw.
-   */
-  similarity_ci: [number, number] | null;
-  /**
-   * The wire row this point was built from, carried whole rather than copied
-   * field by field: the chart needs only the two projections above, while the
-   * table reports the evidence behind them (`count`, `n_seeds`). Null on the
-   * synthetic self-agreement point, which was measured by nobody.
-   */
-  measurement: BookLocalMeanSimilarity | null;
-}
-
-/**
- * Why a roster book has no number on a line. The server states absence by
- * omission, so the reason has to be reconstructed -- and the three are not
- * interchangeable to a reader:
- *
- *   absent          -- the book's vocabulary lacks a word this line needs.
- *   too_few_anchors -- it has every word, but shares less than the floor's
- *                      worth of vocabulary with anything it could be read
- *                      against, so no comparison could be made.
- *   unscored        -- neither. `n_shared_terms` is a BEST case over peers and
- *                      is counted before the expression's leaves are excluded,
- *                      so clearing the floor does not promise any individual
- *                      comparison cleared it. Rare, and honest about it.
- */
-export type GapCause = "absent" | "too_few_anchors" | "unscored";
-
-/** A roster book this line did not measure. */
-export interface SeriesGap {
-  id: number;
-  label: string;
-  year: number;
-  yearColor: YearColor;
-  unavailable: true;
-  similarity: null;
-  similarity_ci: null;
-  cause: GapCause;
-  /** Which of THIS line's terms the book lacks -- the missing subset only, in
-   * the expression's own order. Empty unless `cause` is "absent". */
-  missingTerms: string[];
-}
-
-/**
- * What made the server pick a neighbour, minus the parts the Series already
- * says. Null on the query line, which was not picked by anything.
- */
-export type TermStats = Omit<TermData, "term" | "books">;
-
-export interface Series {
-  term: string;
-  isQuery: boolean;
-  color: string;
-  stats: TermStats | null;
-  points: SeriesPoint[];
-  gaps: SeriesGap[];
-}
-
-export interface DiachronicSeries {
-  series: Series[];
-  roster: Book[];
-  missingEverywhere: string[];
-}
-
-/**
- * Turn a SemanticDriftResponse into the per-TERM series the chart draws — and
- * the DriftTable tabulates. Both surfaces call this, so a row in the table
- * always corresponds to a line/dot in the chart above it.
- *
- * The response is already term-oriented, which is why there is no pivot here:
- *   expr          — the query's own line ({ expr, terms, books })
- *   nearest_terms — one neighbour line each ({ term, books })
- *   books         — the ROSTER: every book the request named, measured or not
- *
- * Mind the key collision: `payload.books` is the roster (keyed `id`), while
- * `payload.expr.books` and `payload.nearest_terms[].books` are measurements
- * (keyed `book_id`). Same word, two depths, different types.
- *
- * Absence is expressed by omission — there is no `unavailable` flag on the
- * wire. A book is on a line only if that line measured it, so a line's gaps are
- * exactly the roster books missing from its own `books` list. We still emit
- * `unavailable: true` on those, because that is the shape the chart and table
- * already read.
- *
- * Deriving gaps this way rather than reading the roster's own `missing_terms`
- * is deliberate, and strictly more correct: a book drops off a line whenever
- * the server could not score it, which includes sharing too few local anchor
- * terms with any peer (NUM_LOCAL_NEAREST_TERMS, 75) even though it carries every
- * word of the query. `missing_terms` only ever describes vocabulary -- the
- * roster's `n_shared_terms` is the field that speaks to this second cause.
- *
- * `pinnedBook` (optional): the reference book is never among the targets — its
- * agreement with itself is a constant 1.0 (see queries.ts). When a caller passes
- * it back in, that 1.0 point is re-added to every surviving line so the
- * reference appears as a marker at its own year. Only the chart opts in; the
- * DriftTable omits it, so the table keeps a column only per book actually
- * measured (an all-1.000 column would carry no information).
- *
- * Colours: the query term gets the deep-blue focal ink (QUERY_COLOR); each
- * neighbour cycles through the categorical SERIES_COLORS palette, so every
- * term (dot, on-chart label, and connecting line) is its own distinct colour.
- * Both the chart and the table read `s.color`, so the table's swatches match
- * the chart's lines exactly.
- */
 export function buildDiachronicSeries(
   payload: SemanticDriftResponse | null,
-  allBooks: Book[],
-  pinnedBook: Book | null = null,
+  allBooks: BookResponse[],
+  pinnedBook: BookResponse | null = null,
 ): DiachronicSeries {
   if (!payload?.books.length || !allBooks.length) {
-    return { series: [], roster: [], missingEverywhere: [] };
+    return { series: [], roster: [] };
   }
   const bookMap = new Map(allBooks.map((b) => [b.id, b]));
-  // The roster keyed for lookup: `missing_terms` and `n_shared_terms` are what
-  // turn a book's omission from a line into a stated reason (see gapCause).
   const summaryById = new Map(payload.books.map((s) => [s.id, s]));
 
-  // The roster is the x-axis universe. Books the corpus no longer knows about
-  // are dropped rather than plotted as anonymous ids. Sorted here once, so
-  // every consumer (points, gaps, chart rows, table columns) reads the same
-  // chronology — including the label tiebreak, so two books published in the
-  // same year have a stable order rather than one that depends on which term
-  // happened to mention them first.
   const roster = payload.books
     .filter((summary) => bookMap.has(summary.id))
     .map((summary) => bookMap.get(summary.id)!)
     .sort(byPublishedYear);
 
-  // Query last so its line and dots render on top of the neighbours. Built in
-  // that order directly, rather than sorted afterwards, so the neighbour colour
-  // cycle follows the server's nearest-term ranking.
-  //
-  // `terms` is the line's own vocabulary -- the expression's leaves for the
-  // query, the single word for a neighbour. Intersected with a book's
-  // `missing_terms` (which spans EVERY line at once) it says what THIS line
-  // needed and that book lacked.
   const lines = [
-    ...payload.nearest_terms.map(({ term, books, ...stats }) => ({
+    ...payload.nearest_terms.map(({ term, books, ...stats }, i) => ({
       term,
       isQuery: false,
+      rank: i + 1,
       terms: [term],
       stats,
       rows: books,
@@ -170,6 +43,7 @@ export function buildDiachronicSeries(
     {
       term: payload.expr.expr,
       isQuery: true,
+      rank: 0,
       terms: payload.expr.terms,
       stats: null,
       rows: payload.expr.books,
@@ -177,7 +51,6 @@ export function buildDiachronicSeries(
   ];
 
   const built: Series[] = [];
-  const dead: string[] = [];
   let colorIndex = 0;
 
   for (const line of lines) {
@@ -192,7 +65,6 @@ export function buildDiachronicSeries(
         id: book.id,
         label: book.label,
         year: book.published_year,
-        yearColor: book.yearColor,
       };
       const raw = measured.get(book.id);
       if (raw) {
@@ -222,7 +94,6 @@ export function buildDiachronicSeries(
     gaps.sort(byYear);
 
     if (!points.length) {
-      dead.push(line.term);
       continue;
     }
 
@@ -232,18 +103,13 @@ export function buildDiachronicSeries(
       color: line.isQuery
         ? QUERY_COLOR
         : SERIES_COLORS[colorIndex++ % SERIES_COLORS.length],
+      rank: line.rank,
       stats: line.stats,
       points,
       gaps,
     });
   }
 
-  // Re-add the pinned reference book (never among the targets) as a self-
-  // agreement marker on every line: a point at its own year, value 1.0, with no
-  // CI (self-agreement is exact — no whisker). Guarded so it never duplicates a
-  // book already present, and only lines that already have real points get it —
-  // a term found ONLY in the pinned book stays dropped rather than showing a
-  // lone dot floating at 1.0.
   if (pinnedBook) {
     for (const s of built) {
       if (s.points.some((p) => p.id === pinnedBook.id)) continue;
@@ -253,7 +119,6 @@ export function buildDiachronicSeries(
           id: pinnedBook.id,
           label: pinnedBook.label,
           year: pinnedBook.published_year,
-          yearColor: pinnedBook.yearColor,
           similarity: 1,
           similarity_ci: null,
           measurement: null,
@@ -261,39 +126,141 @@ export function buildDiachronicSeries(
       ].sort(byYear);
     }
 
-    // The pinned book is excluded from the request (see queries.ts), so it is
-    // absent from `payload.books` and therefore from the roster built above —
-    // yet it now carries a point on every line and needs a place on the x-axis.
-    // Added HERE, after the per-line walk, and never before it: a roster that
-    // already contained the pinned book would have made it a `gap` on every
-    // line, drawing it as a hollow "absent from this text" marker at the same
-    // time as the 1.0 point above.
     if (!roster.some((b) => b.id === pinnedBook.id)) {
       roster.push(pinnedBook);
       roster.sort(byPublishedYear);
     }
   }
 
-  return { series: built, roster, missingEverywhere: dead };
+  return { series: built, roster };
 }
 
-/**
- * Rank the two causes in the order the evidence settles them: a book that
- * lacks one of the line's words was never a candidate for measurement, so that
- * is the whole story regardless of how much vocabulary it shares. Only once it
- * has every word does the anchor floor become the thing that stopped it.
- */
 function gapCause(missingTerms: string[], summary: BookSummary | undefined): GapCause {
   if (missingTerms.length) return "absent";
   if (summary && summary.n_shared_terms < LOCAL_ANCHOR_FLOOR) return "too_few_anchors";
   return "unscored";
 }
 
-// Points/gaps carry a flat `year`; roster entries are raw books with
-// `published_year`. Both tiebreak on label so same-year books never swap order
-// between the chart's rows and the table's columns.
 const byYear = (a: { year: number; label: string }, b: { year: number; label: string }) =>
   a.year - b.year || a.label.localeCompare(b.label);
 
-const byPublishedYear = (a: Book, b: Book) =>
+const byPublishedYear = (a: BookResponse, b: BookResponse) =>
   a.published_year - b.published_year || a.label.localeCompare(b.label);
+
+/* -------------------------------------------------------------------------- *
+ * The chart model: the same series, projected into what Recharts draws.
+ *
+ * The second half of one pipeline -- `buildDiachronicSeries` above answers what
+ * the lines ARE, this answers where they sit. Only the chart calls it; the
+ * DriftTable stops at the series.
+ * -------------------------------------------------------------------------- */
+
+const MIN_Y_SPAN = 0.04;
+
+export function buildChartModel(
+  series: Series[],
+  roster: BookResponse[],
+): ChartModel {
+  const allPoints = series.flatMap((s) => s.points);
+  if (!allPoints.length || !roster.length) return EMPTY_MODEL;
+
+  const chartData: ChartRow[] = roster.map((book) => ({
+    year: book.published_year,
+    bookId: book.id,
+    book: book.label,
+    values: {},
+  }));
+
+  const sims = allPoints.map((d) => d.similarity);
+  const years = chartData.map((r) => r.year);
+  const yearMin = Math.min(...years);
+  const yearMax = Math.max(...years);
+  const simMin = Math.min(...sims);
+  const simMax = Math.max(...sims);
+
+  let [yMin, yMax] = [Math.max(-1, simMin), Math.min(1, simMax)];
+  if (yMax - yMin < MIN_Y_SPAN) {
+    const mid = (yMin + yMax) / 2;
+    [yMin, yMax] = [Math.max(-1, mid - MIN_Y_SPAN / 2), Math.min(1, mid + MIN_Y_SPAN / 2)];
+  }
+
+  const rowByBookId = new Map(chartData.map((row) => [row.bookId, row]));
+  const clamp = (v: number) => Math.min(yMax, Math.max(yMin, v));
+
+  for (const s of series) {
+    for (const p of s.points) {
+      const row = rowByBookId.get(p.id);
+      if (!row) continue;
+
+      const bounds = p.similarity_ci
+        ? ([clamp(p.similarity_ci[0]), clamp(p.similarity_ci[1])] as [number, number])
+        : undefined;
+      row.values[s.term] = {
+        value: p.similarity,
+        band: bounds,
+        ci: bounds ? [p.similarity - bounds[0], bounds[1] - p.similarity] : undefined,
+      };
+    }
+  }
+
+  return {
+    chartData,
+    xDomain: [yearMin, yearMax],
+    yMin,
+    yMax,
+    xTicks: generateYearTicks(yearMin, yearMax),
+    yTicks: generateLinearTicks(yMin, yMax),
+  };
+}
+
+const EMPTY_MODEL: ChartModel = {
+  chartData: [],
+  xDomain: [0, 1],
+  yMin: 0,
+  yMax: 1,
+  xTicks: [],
+  yTicks: [],
+};
+
+function generateYearTicks(min: number, max: number): number[] {
+  const span = max - min;
+  const step = span > 200 ? 50 : span > 100 ? 25 : span > 50 ? 10 : 5;
+  const start = Math.ceil(min / step) * step;
+  const ticks: number[] = [];
+  for (let t = start; t <= max; t += step) ticks.push(t);
+  return ticks;
+}
+
+/**
+ * Ticks at a round step (1, 2 or 5 x 10^k) lying INSIDE [min, max].
+ *
+ * Recharts' own `tickCount` would pick a step too, but it then widens the domain
+ * out to the outermost tick it chose (combineAxisDomainWithNiceTicks), which
+ * silently undoes a domain fitted to the data -- the axis ends up showing empty
+ * space below the smallest value and above the largest. Choosing the ticks here
+ * and passing them as `ticks` leaves the domain alone, which is also how the
+ * x-axis already works.
+ */
+const TARGET_TICKS = 6;
+
+function generateLinearTicks(min: number, max: number): number[] {
+  const span = max - min;
+  if (!(span > 0)) return [min];
+
+  const rough = span / (TARGET_TICKS - 1);
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const normalised = rough / magnitude;
+  // Snap to the NEAREST round step, splitting at the geometric midpoints
+  // (sqrt 2, sqrt 10, sqrt 50). Rounding up instead would take a span that wants
+  // a 0.1 step to 0.2 and halve the gridlines -- 1.06 is far nearer 1 than 2.
+  const step =
+    (normalised >= 7.07 ? 10 : normalised >= 3.16 ? 5 : normalised >= 1.41 ? 2 : 1) * magnitude;
+
+  const ticks: number[] = [];
+  // Epsilon so a tick landing exactly on `max` survives binary float error.
+  for (let t = Math.ceil(min / step) * step; t <= max + step * 1e-9; t += step) {
+    // Repeated addition drifts (0.1 + 0.2 = 0.30000000000000004); snap to the grid.
+    ticks.push(Math.round(t / step) * step);
+  }
+  return ticks;
+}

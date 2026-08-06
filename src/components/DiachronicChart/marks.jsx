@@ -1,20 +1,16 @@
+import { useMemo } from "react";
 import { Box } from "@mui/material";
+import { Text, usePlotArea, useYAxisScale } from "recharts";
 
-/**
- * The chart's hand-drawn pieces: the dots, the on-chart term labels, and the
- * tooltip's contents. Recharts has no native form for any of them.
- */
+import { INK } from "./palette";
+import {
+  LABEL_LINE_H,
+  LABEL_FONT_SIZE,
+  labelLines,
+  stackLabels,
+  termWeight,
+} from "./layout";
 
-/**
- * Custom Recharts dot: filled with its series colour, white-ringed, and the hover
- * target for its whole series -- entering one connects that term's line and dims
- * the rest (see index.jsx). Dots stay visible at all times, unlike neighbour
- * lines, which connect only on hover.
- *
- * `value == null` is what makes a book the term is absent from draw nothing:
- * Recharts still calls this for the missing row, and returning null leaves the
- * gap the broken line already shows.
- */
 export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
   if (cx == null || cy == null || value == null) return null;
   return (
@@ -23,7 +19,7 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
       cy={cy}
       r={r}
       fill={color}
-      stroke="#fff"
+      stroke={INK.surface}
       strokeWidth={1}
       opacity={dim ? 0.15 : 1}
       // The dot is filled, so it would catch the pointer anyway; saying so keeps
@@ -32,32 +28,6 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     />
-  );
-}
-
-/**
- * On-chart term label, anchored at a series' earliest point via a zero-radius
- * ReferenceDot -- this is what replaces a separate legend, so a line is named
- * where it starts rather than in a key the eye has to travel to. Bold + focal
- * colour for the query, lighter for neighbours; dims in step with the rest of
- * its series when another term is hovered.
- */
-export function SeriesLabel({ viewBox, term, color, isQuery, dim }) {
-  if (!viewBox) return null;
-  const { x, y } = viewBox;
-  return (
-    <text
-      x={x + 8}
-      y={y}
-      dy={4}
-      fontSize={11}
-      fontWeight={isQuery ? 700 : 500}
-      fill={color}
-      opacity={dim ? 0.25 : 1}
-      style={{ pointerEvents: "none" }}
-    >
-      {term}
-    </text>
   );
 }
 
@@ -105,7 +75,9 @@ export function DotTooltip({ active, payload, activeTerm, color }) {
           }}
         />
         <span>{activeTerm}</span>
-        <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>
+        <span
+          style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
+        >
           {point.value.toFixed(3)}
           {lo != null && (
             <span style={{ color: "#9ca3af" }}>
@@ -117,4 +89,81 @@ export function DotTooltip({ active, payload, activeTerm, color }) {
       </div>
     </Box>
   );
+}
+
+export function SeriesLabels({ series, width, activeTerm, onHover }) {
+  const plot = usePlotArea();
+  const yScale = useYAxisScale();
+
+  const placed = useMemo(
+    () => (plot && yScale ? place(series, width, plot, yScale) : null),
+    [series, width, plot, yScale],
+  );
+
+  if (!placed) return null;
+  const { labelled, tops, right } = placed;
+
+  return (
+    <g className="diachronic-series-labels">
+      {labelled.map(({ series: s, height }, i) =>
+        tops[i] == null ? null : (
+          <g
+            key={s.term}
+            onMouseEnter={() => onHover(s.term)}
+            onMouseLeave={() => onHover(null)}
+          >
+            <rect
+              x={right - width}
+              y={tops[i]}
+              width={width}
+              height={height}
+              fill="transparent"
+              pointerEvents="all"
+            />
+            <Text
+              x={right}
+              y={tops[i]}
+              textAnchor="end"
+              verticalAnchor="start"
+              width={width}
+              fontSize={LABEL_FONT_SIZE}
+              fontWeight={termWeight(s.isQuery)}
+              fill={s.color}
+              opacity={activeTerm !== null && activeTerm !== s.term ? 0.25 : 1}
+              stroke={INK.surface}
+              strokeWidth={3}
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              pointerEvents="none"
+            >
+              {s.term}
+            </Text>
+          </g>
+        ),
+      )}
+    </g>
+  );
+}
+
+function place(series, width, plot, yScale) {
+  const labelled = [];
+  for (const s of series) {
+    const y = yScale(s.points[0].similarity);
+    if (typeof y !== "number" || Number.isNaN(y)) continue;
+    const height = labelLines(s.term, s.isQuery, width) * LABEL_LINE_H;
+    labelled.push({
+      series: s,
+      height,
+      anchor: { y: y - height / 2, height, rank: s.rank },
+    });
+  }
+
+  return {
+    labelled,
+    tops: stackLabels(
+      labelled.map((l) => l.anchor),
+      { top: plot.y, bottom: plot.y + plot.height },
+    ),
+    right: plot.x + width,
+  };
 }

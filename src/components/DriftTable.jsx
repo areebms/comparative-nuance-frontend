@@ -11,7 +11,7 @@ import {
   Box,
 } from "@mui/material";
 import { buildDiachronicSeries } from "./DiachronicChart/series";
-import SeriesSwatch from "./DiachronicChart/SeriesSwatch";
+import { QUERY_STROKE_W, NEIGHBOUR_STROKE_W } from "./DiachronicChart/layout";
 import { labels } from "../content/labels";
 
 export default function DriftTable({ payload, allBooks, sort }) {
@@ -45,15 +45,7 @@ export default function DriftTable({ payload, allBooks, sort }) {
               />
             </TableCell>
             {roster.map((b) => (
-              <TableCell
-                key={b.id}
-                align="right"
-                sx={{
-                  ...HEAD,
-                  bgcolor: b.yearColor.fill,
-                  color: b.yearColor.text,
-                }}
-              >
+              <TableCell key={b.id} align="right" sx={HEAD}>
                 {b.label}
               </TableCell>
             ))}
@@ -100,6 +92,25 @@ export default function DriftTable({ payload, allBooks, sort }) {
         </TableBody>
       </Table>
     </TableContainer>
+  );
+}
+
+const SWATCH_MIN_H = 2;
+
+function SeriesSwatch({ color, isQuery }) {
+  return (
+    <Box
+      sx={{
+        width: 14,
+        height: Math.max(
+          SWATCH_MIN_H,
+          isQuery ? QUERY_STROKE_W : NEIGHBOUR_STROKE_W,
+        ),
+        bgcolor: color,
+        borderRadius: 1,
+        flex: "0 0 auto",
+      }}
+    />
   );
 }
 
