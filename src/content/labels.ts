@@ -51,5 +51,6 @@ export const labels = {
         "corpus. Measured corpus-wide, so it is not an average of the values " +
         "in this row.",
     },
+    booksGroup: "Definitional Genericness within Corpus",
   },
 };

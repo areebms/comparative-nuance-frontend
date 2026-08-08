@@ -10,13 +10,8 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import {
-  buildDiachronicSeries,
-  isDrawn,
-  CHART_TERM_LIMIT,
-} from "./DiachronicChart/series";
+import { buildDiachronicSeries, isDrawn } from "./DiachronicChart/series";
 import { QUERY_STROKE_W, NEIGHBOUR_STROKE_W } from "./DiachronicChart/layout";
-import { INK } from "./DiachronicChart/palette";
 import { labels } from "../content/labels";
 
 export default function DriftTable({ payload, allBooks, sort }) {
@@ -33,21 +28,33 @@ export default function DriftTable({ payload, allBooks, sort }) {
     );
   }
 
-  const rows = [...series].sort(
-    (a, b) => Number(b.isQuery) - Number(a.isQuery),
-  );
+  const rows = series.filter(isDrawn).sort((a, b) => a.rank - b.rank);
 
   return (
     <TableContainer>
       <Table size="small" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow>
-            <TableCell sx={HEAD}>Term</TableCell>
-            <TableCell align="right" sx={HEAD}>
-              <HelpLabel {...labels.columns[sort]} />
+            <TableCell rowSpan={2} sx={{ ...HEAD, ...CELL }}>
+              Expression
             </TableCell>
+            <TableCell rowSpan={2} align="right" sx={{ ...HEAD, ...CELL }}>
+              <HelpLabel {...labels.columns.stability} />
+            </TableCell>
+            <TableCell rowSpan={2} align="right" sx={{ ...HEAD, ...CELL }}>
+              <HelpLabel {...labels.columns.instability} />
+            </TableCell>
+            <TableCell
+              colSpan={roster.length}
+              align="center"
+              sx={{ ...HEAD, ...CELL }}
+            >
+              {labels.columns.booksGroup}
+            </TableCell>
+          </TableRow>
+          <TableRow>
             {roster.map((b) => (
-              <TableCell key={b.id} align="right" sx={HEAD}>
+              <TableCell key={b.id} align="right" sx={{ ...HEAD, ...CELL }}>
                 {b.label}
               </TableCell>
             ))}
@@ -59,17 +66,20 @@ export default function DriftTable({ payload, allBooks, sort }) {
             const gapByBook = new Map(s.gaps.map((g) => [g.id, g]));
             return (
               <TableRow key={s.term} hover>
-                <TableCell>
-                  <TermCell series={s} sort={sort} />
+                <TableCell sx={CELL}>
+                  <TermCell series={s} />
                 </TableCell>
-                <TableCell align="right">
-                  <RankStatCell stats={s.stats} sort={sort} />
+                <TableCell align="right" sx={CELL}>
+                  <RankStatCell stats={s.stats} stat="stability" />
+                </TableCell>
+                <TableCell align="right" sx={CELL}>
+                  <RankStatCell stats={s.stats} stat="instability" />
                 </TableCell>
                 {roster.map((b) => {
                   const p = byBook.get(b.id);
                   const gap = gapByBook.get(b.id);
                   return (
-                    <TableCell key={b.id} align="right">
+                    <TableCell key={b.id} align="right" sx={CELL}>
                       {p ? (
                         <MeasurementValue point={p} />
                       ) : gap ? (
@@ -112,14 +122,10 @@ function SeriesSwatch({ color, isQuery }) {
   );
 }
 
-function TermCell({ series, sort }) {
-  const drawn = isDrawn(series);
+function TermCell({ series }) {
   const term = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <SeriesSwatch
-        color={drawn ? series.color : INK.axis}
-        isQuery={series.isQuery}
-      />
+      <SeriesSwatch color={series.color} isQuery={series.isQuery} />
       <Typography
         variant="body2"
         sx={{ fontWeight: series.isQuery ? 700 : 500 }}
@@ -131,17 +137,13 @@ function TermCell({ series, sort }) {
 
   if (!series.stats) return term;
 
-  const { n_books_in } = series.stats;
-  const value = series.stats[sort];
-  const { short } = labels.columns[sort];
+  const { n_books_in, stability, instability } = series.stats;
   return (
     <Tooltip
       title={
-        `${short} ${value.toFixed(3)}, across the ${n_books_in} ` +
-        `book${n_books_in === 1 ? "" : "s"} that use it.` +
-        (drawn
-          ? ""
-          : ` Not drawn in the chart, which shows the ${CHART_TERM_LIMIT} ${labels.comparativeTerms.sorts[sort]} terms.`)
+        `Stability ${stability.toFixed(3)}, Instability ` +
+        `${instability.toFixed(3)}, across the ${n_books_in} ` +
+        `book${n_books_in === 1 ? "" : "s"} that use it.`
       }
     >
       <Box sx={{ cursor: "help", display: "inline-block" }}>{term}</Box>
@@ -149,21 +151,12 @@ function TermCell({ series, sort }) {
   );
 }
 
-function RankStatCell({ stats, sort }) {
+function RankStatCell({ stats, stat }) {
   if (!stats) return <Dash />;
   return (
-    <>
-      <Typography variant="body2" sx={NUM}>
-        {stats[sort].toFixed(3)}
-      </Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ ...NUM, display: "block" }}
-      >
-        {stats.n_books_in} book{stats.n_books_in === 1 ? "" : "s"}
-      </Typography>
-    </>
+    <Typography variant="body2" sx={NUM}>
+      {stats[stat].toFixed(3)}
+    </Typography>
   );
 }
 
@@ -228,3 +221,4 @@ const Dash = () => (
 
 const HEAD = { fontWeight: 700 };
 const NUM = { fontVariantNumeric: "tabular-nums" };
+const CELL = { py: 0.5 };

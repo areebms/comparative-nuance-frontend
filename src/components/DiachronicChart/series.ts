@@ -1,4 +1,4 @@
-import { SERIES_COLORS, QUERY_COLOR } from "./palette";
+import { seriesColor, QUERY_COLOR } from "./palette";
 import { LOCAL_ANCHOR_FLOOR, DEFAULT_DRIFT_SORT } from "../../types/api";
 import type {
   BookResponse,
@@ -16,8 +16,6 @@ import type {
   SeriesPoint,
 } from "./types";
 
-// The chart draws only the top-ranked neighbours by the active sort stat;
-// the table lists them all.
 export const CHART_TERM_LIMIT = 10;
 
 export const isDrawn = (s: Series) => s.isQuery || s.rank <= CHART_TERM_LIMIT;
@@ -39,22 +37,23 @@ export function buildDiachronicSeries(
     .map((summary) => bookMap.get(summary.id)!)
     .sort(byPublishedYear);
 
-  // The server returns comparative_terms alphabetically, so rank has to be
-  // derived rather than taken from array order. Which stat ranks them is a
-  // display choice (the Comparative Terms setting), not a server concern.
   const ranked = [...payload.comparative_terms].sort(
     (a, b) => b[sort] - a[sort],
   );
 
+  const rankedColorCount = Math.min(ranked.length, CHART_TERM_LIMIT);
+
+  const rankedLines = ranked.map(({ term, books, ...stats }, i) => ({
+    term,
+    isQuery: false,
+    rank: i + 1,
+    terms: [term],
+    stats,
+    rows: books,
+  }));
+
   const lines = [
-    ...ranked.map(({ term, books, ...stats }, i) => ({
-      term,
-      isQuery: false,
-      rank: i + 1,
-      terms: [term],
-      stats,
-      rows: books,
-    })),
+    ...rankedLines.slice().reverse(),
     {
       term: payload.expr.expr,
       isQuery: true,
@@ -66,7 +65,6 @@ export function buildDiachronicSeries(
   ];
 
   const built: Series[] = [];
-  let colorIndex = 0;
 
   for (const line of lines) {
     const measured = new Map(line.rows.map((r) => [r.book_id, r]));
@@ -111,7 +109,7 @@ export function buildDiachronicSeries(
       isQuery: line.isQuery,
       color: line.isQuery
         ? QUERY_COLOR
-        : SERIES_COLORS[colorIndex++ % SERIES_COLORS.length],
+        : seriesColor(line.rank, rankedColorCount),
       rank: line.rank,
       stats: line.stats,
       points,
@@ -144,14 +142,20 @@ export function buildDiachronicSeries(
   return { series: built, roster };
 }
 
-function gapCause(missingTerms: string[], summary: BookSummary | undefined): GapCause {
+function gapCause(
+  missingTerms: string[],
+  summary: BookSummary | undefined,
+): GapCause {
   if (missingTerms.length) return "absent";
-  if (summary && summary.n_shared_terms < LOCAL_ANCHOR_FLOOR) return "too_few_anchors";
+  if (summary && summary.n_shared_terms < LOCAL_ANCHOR_FLOOR)
+    return "too_few_anchors";
   return "unscored";
 }
 
-const byYear = (a: { year: number; label: string }, b: { year: number; label: string }) =>
-  a.year - b.year || a.label.localeCompare(b.label);
+const byYear = (
+  a: { year: number; label: string },
+  b: { year: number; label: string },
+) => a.year - b.year || a.label.localeCompare(b.label);
 
 const byPublishedYear = (a: BookResponse, b: BookResponse) =>
   a.published_year - b.published_year || a.label.localeCompare(b.label);
@@ -182,7 +186,10 @@ export function buildChartModel(
   let [yMin, yMax] = [Math.max(-1, simMin), Math.min(1, simMax)];
   if (yMax - yMin < MIN_Y_SPAN) {
     const mid = (yMin + yMax) / 2;
-    [yMin, yMax] = [Math.max(-1, mid - MIN_Y_SPAN / 2), Math.min(1, mid + MIN_Y_SPAN / 2)];
+    [yMin, yMax] = [
+      Math.max(-1, mid - MIN_Y_SPAN / 2),
+      Math.min(1, mid + MIN_Y_SPAN / 2),
+    ];
   }
 
   const rowByBookId = new Map(chartData.map((row) => [row.bookId, row]));
@@ -194,12 +201,17 @@ export function buildChartModel(
       if (!row) continue;
 
       const bounds = p.similarity_ci
-        ? ([clamp(p.similarity_ci[0]), clamp(p.similarity_ci[1])] as [number, number])
+        ? ([clamp(p.similarity_ci[0]), clamp(p.similarity_ci[1])] as [
+            number,
+            number,
+          ])
         : undefined;
       row.values[s.term] = {
         value: p.similarity,
         band: bounds,
-        ci: bounds ? [p.similarity - bounds[0], bounds[1] - p.similarity] : undefined,
+        ci: bounds
+          ? [p.similarity - bounds[0], bounds[1] - p.similarity]
+          : undefined,
       };
     }
   }
@@ -242,10 +254,20 @@ function generateLinearTicks(min: number, max: number): number[] {
   const magnitude = 10 ** Math.floor(Math.log10(rough));
   const normalised = rough / magnitude;
   const step =
-    (normalised >= 7.07 ? 10 : normalised >= 3.16 ? 5 : normalised >= 1.41 ? 2 : 1) * magnitude;
+    (normalised >= 7.07
+      ? 10
+      : normalised >= 3.16
+        ? 5
+        : normalised >= 1.41
+          ? 2
+          : 1) * magnitude;
 
   const ticks: number[] = [];
-  for (let t = Math.ceil(min / step) * step; t <= max + step * 1e-9; t += step) {
+  for (
+    let t = Math.ceil(min / step) * step;
+    t <= max + step * 1e-9;
+    t += step
+  ) {
     ticks.push(Math.round(t / step) * step);
   }
   return ticks;
