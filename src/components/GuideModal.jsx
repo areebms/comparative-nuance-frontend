@@ -177,16 +177,14 @@ function ExploreStep() {
             that author. With nothing pinned, each book is instead compared
             against all the others, showing how typical its usage is.
           </Typography>
-          {/* Named from labels.ts, not retyped: the guide is only useful if it
-              calls each control what the control calls itself. */}
           <Typography variant="body2" color="text.secondary">
-            The "{labels.nearestTerms.label}" dropdown decides which of those
-            companion terms get drawn. "{labels.nearestTerms.sorts.mean_similarity}"
-            picks the terms used closest to your query overall. "
-            {labels.nearestTerms.sorts.slope}" starts from that same close
-            company and keeps the terms whose closeness to your query rises or
-            falls most steadily from the earliest book to the latest — the lines
-            with something to say about change rather than about resemblance.
+            The "{labels.comparativeTerms.label}" dropdown decides which of
+            those companion terms get drawn. "{labels.comparativeTerms.sorts.stability}"
+            ranks them by how consistently each one sits near your query
+            across the whole corpus. "{labels.comparativeTerms.sorts.instability}"
+            ranks the same terms by how much that closeness varies from book
+            to book instead — the lines with something to say about change
+            rather than about resemblance.
           </Typography>
         </GuideCard>
       </Stack>
@@ -294,10 +292,6 @@ export default function GuideModal({ open, onClose }) {
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
-      // Rewind after the close animation finishes, so the next open starts at
-      // step one without the reader watching it jump back on the way out. Doing
-      // this in an effect on `open` would set state during render for the same
-      // result.
       TransitionProps={{ onExited: () => setActiveStep(0) }}
       PaperProps={{
         sx: { borderRadius: { xs: 0, sm: 2.5 } },

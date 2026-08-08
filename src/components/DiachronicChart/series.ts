@@ -1,8 +1,9 @@
 import { SERIES_COLORS, QUERY_COLOR } from "./palette";
-import { LOCAL_ANCHOR_FLOOR } from "../../types/api";
+import { LOCAL_ANCHOR_FLOOR, DEFAULT_DRIFT_SORT } from "../../types/api";
 import type {
   BookResponse,
   BookSummary,
+  DriftSort,
   SemanticDriftResponse,
 } from "../../types/api";
 import type {
@@ -15,10 +16,17 @@ import type {
   SeriesPoint,
 } from "./types";
 
+// The chart draws only the top-ranked neighbours by the active sort stat;
+// the table lists them all.
+export const CHART_TERM_LIMIT = 10;
+
+export const isDrawn = (s: Series) => s.isQuery || s.rank <= CHART_TERM_LIMIT;
+
 export function buildDiachronicSeries(
   payload: SemanticDriftResponse | null,
   allBooks: BookResponse[],
   pinnedBook: BookResponse | null = null,
+  sort: DriftSort = DEFAULT_DRIFT_SORT,
 ): DiachronicSeries {
   if (!payload?.books.length || !allBooks.length) {
     return { series: [], roster: [] };
@@ -31,8 +39,15 @@ export function buildDiachronicSeries(
     .map((summary) => bookMap.get(summary.id)!)
     .sort(byPublishedYear);
 
+  // The server returns comparative_terms alphabetically, so rank has to be
+  // derived rather than taken from array order. Which stat ranks them is a
+  // display choice (the Comparative Terms setting), not a server concern.
+  const ranked = [...payload.comparative_terms].sort(
+    (a, b) => b[sort] - a[sort],
+  );
+
   const lines = [
-    ...payload.nearest_terms.map(({ term, books, ...stats }, i) => ({
+    ...ranked.map(({ term, books, ...stats }, i) => ({
       term,
       isQuery: false,
       rank: i + 1,
@@ -58,8 +73,6 @@ export function buildDiachronicSeries(
     const points: SeriesPoint[] = [];
     const gaps: SeriesGap[] = [];
 
-    // Walk the ROSTER, not the measurements: that is what makes a book's
-    // absence from this line visible instead of silently skipped.
     for (const book of roster) {
       const base = {
         id: book.id,
@@ -70,20 +83,17 @@ export function buildDiachronicSeries(
       if (raw) {
         points.push({
           ...base,
-          similarity: raw.similarity,
-          similarity_ci: raw.similarity_ci, // absolute [lo, hi]
+          similarity: raw.mean_similarity,
+          similarity_ci: raw.similarity_ci,
           measurement: raw,
         });
       } else {
         const summary = summaryById.get(book.id);
         const missingTerms = line.terms.filter((t) =>
-          summary?.missing_terms.includes(t),
+          summary?.missing_terms?.includes(t),
         );
         gaps.push({
-          ...base,
-          unavailable: true,
-          similarity: null,
-          similarity_ci: null,
+          id: book.id,
           cause: gapCause(missingTerms, summary),
           missingTerms,
         });
@@ -91,7 +101,6 @@ export function buildDiachronicSeries(
     }
 
     points.sort(byYear);
-    gaps.sort(byYear);
 
     if (!points.length) {
       continue;
@@ -146,14 +155,6 @@ const byYear = (a: { year: number; label: string }, b: { year: number; label: st
 
 const byPublishedYear = (a: BookResponse, b: BookResponse) =>
   a.published_year - b.published_year || a.label.localeCompare(b.label);
-
-/* -------------------------------------------------------------------------- *
- * The chart model: the same series, projected into what Recharts draws.
- *
- * The second half of one pipeline -- `buildDiachronicSeries` above answers what
- * the lines ARE, this answers where they sit. Only the chart calls it; the
- * DriftTable stops at the series.
- * -------------------------------------------------------------------------- */
 
 const MIN_Y_SPAN = 0.04;
 
@@ -231,16 +232,6 @@ function generateYearTicks(min: number, max: number): number[] {
   return ticks;
 }
 
-/**
- * Ticks at a round step (1, 2 or 5 x 10^k) lying INSIDE [min, max].
- *
- * Recharts' own `tickCount` would pick a step too, but it then widens the domain
- * out to the outermost tick it chose (combineAxisDomainWithNiceTicks), which
- * silently undoes a domain fitted to the data -- the axis ends up showing empty
- * space below the smallest value and above the largest. Choosing the ticks here
- * and passing them as `ticks` leaves the domain alone, which is also how the
- * x-axis already works.
- */
 const TARGET_TICKS = 6;
 
 function generateLinearTicks(min: number, max: number): number[] {
@@ -250,16 +241,11 @@ function generateLinearTicks(min: number, max: number): number[] {
   const rough = span / (TARGET_TICKS - 1);
   const magnitude = 10 ** Math.floor(Math.log10(rough));
   const normalised = rough / magnitude;
-  // Snap to the NEAREST round step, splitting at the geometric midpoints
-  // (sqrt 2, sqrt 10, sqrt 50). Rounding up instead would take a span that wants
-  // a 0.1 step to 0.2 and halve the gridlines -- 1.06 is far nearer 1 than 2.
   const step =
     (normalised >= 7.07 ? 10 : normalised >= 3.16 ? 5 : normalised >= 1.41 ? 2 : 1) * magnitude;
 
   const ticks: number[] = [];
-  // Epsilon so a tick landing exactly on `max` survives binary float error.
   for (let t = Math.ceil(min / step) * step; t <= max + step * 1e-9; t += step) {
-    // Repeated addition drifts (0.1 + 0.2 = 0.30000000000000004); snap to the grid.
     ticks.push(Math.round(t / step) * step);
   }
   return ticks;

@@ -1,7 +1,7 @@
 import { AppBar, Toolbar, Box, IconButton, Divider } from "@mui/material";
 import HelpCenterIcon from "@mui/icons-material/HelpCenter";
 import VectorExpressionInput from "./VectorExpressionInput";
-import NearestTermsSort from "./NearestTermsSort";
+import ComparativeTermsSort from "./ComparativeTermsSort";
 
 const LogoBox = () => (
   <Box
@@ -96,7 +96,7 @@ export default function TopBar({
           </Box>
 
           <Box sx={{ gridArea: "sort", justifySelf: "end" }}>
-            <NearestTermsSort sort={sort} onSortChange={onSortChange} />
+            <ComparativeTermsSort sort={sort} onSortChange={onSortChange} />
           </Box>
 
           <IconButton

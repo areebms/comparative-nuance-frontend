@@ -15,7 +15,7 @@ import {
 
 import ChartMessage, { ChartSpinner } from "./ChartMessage";
 import { INK } from "./palette";
-import { buildDiachronicSeries, buildChartModel } from "./series";
+import { buildDiachronicSeries, buildChartModel, isDrawn } from "./series";
 import { SeriesDot, DotTooltip, SeriesLabels } from "./marks";
 import { labels } from "../../content/labels";
 import {
@@ -59,13 +59,16 @@ export default function DiachronicChart({
   isLoading,
   hasError,
   allBooks,
+  sort,
 }) {
   const [activeTerm, setActiveTerm] = useState(null);
 
-  const { series, roster } = useMemo(
-    () => buildDiachronicSeries(payload, allBooks, refBook),
-    [payload, allBooks, refBook],
+  const { series: allSeries, roster } = useMemo(
+    () => buildDiachronicSeries(payload, allBooks, refBook, sort),
+    [payload, allBooks, refBook, sort],
   );
+
+  const series = useMemo(() => allSeries.filter(isDrawn), [allSeries]);
 
   const { chartData, xDomain, yMin, yMax, xTicks, yTicks } = useMemo(
     () => buildChartModel(series, roster),
@@ -183,8 +186,6 @@ export default function DiachronicChart({
 
           {series.map((s) => {
             const dim = isDimmed(s.term);
-            // Neighbour lines only connect their dots once their term is
-            // hovered; the query line is always connected (the focal reference).
             const revealed = s.isQuery || activeTerm === s.term;
             return (
               <Line
@@ -197,8 +198,6 @@ export default function DiachronicChart({
                 strokeOpacity={s.isQuery ? (dim ? 0.15 : 1) : revealed ? 1 : 0}
                 connectNulls={false}
                 isAnimationActive={false}
-                // Recharts' own hover dot would otherwise draw on top of ours and
-                // swallow the pointer event at the dot's dead centre.
                 activeDot={false}
                 dot={(props) => (
                   <SeriesDot

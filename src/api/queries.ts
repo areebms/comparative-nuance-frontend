@@ -4,10 +4,8 @@ import { stringifyExpression } from "../utils/vectorExpressionParser";
 import { ApiError, unwrapReason } from "./errors";
 import type { ErrorKind } from "./errors";
 import type { OperationTree } from "../types/vectorExpression";
-import { DEFAULT_DRIFT_SORT } from "../types/api";
 import type {
   BookResponse,
-  DriftSort,
   ParseDescribeResponse,
   Reason,
   SemanticDriftRequestBody,
@@ -91,7 +89,6 @@ export function useSemanticDrift(
   bookIds: number[],
   tree: OperationTree | null,
   sourceBookId: number | null = null,
-  sort: DriftSort = DEFAULT_DRIFT_SORT,
 ) {
   const targetIds = useMemo(
     () => bookIds.filter((id) => id !== sourceBookId),
@@ -99,7 +96,7 @@ export function useSemanticDrift(
   );
 
   const drift = useQuery<SemanticDriftResponse, ApiError>({
-    queryKey: ["semantic-drift", sourceBookId, tree, targetIds, sort],
+    queryKey: ["semantic-drift", sourceBookId, tree, targetIds],
     queryFn: () => {
       const path =
         sourceBookId !== null
@@ -109,7 +106,6 @@ export function useSemanticDrift(
       const body: SemanticDriftRequestBody = {
         tree: tree!,
         book_ids: targetIds,
-        sort,
       };
       return postJson<SemanticDriftResponse>(path, body, {
         reasons: ["expression_absent", "query_in_too_few_books"],

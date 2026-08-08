@@ -7,11 +7,11 @@ export const labels = {
     pinned: (bookLabel: string) => `Neighbourhood agreement with ${bookLabel}`,
   },
 
-  nearestTerms: {
-    label: "Nearest terms",
+  comparativeTerms: {
+    label: "Comparative Terms",
     sorts: {
-      mean_similarity: "Most similar",
-      slope: "Most changed",
+      stability: "Stable",
+      instability: "Unstable",
     } satisfies Record<DriftSort, string>,
   },
 
@@ -37,16 +37,19 @@ export const labels = {
   },
 
   columns: {
-    similarity: {
-      short: "Similarity",
-      help: "Mean Similarity",
-    },
-    trend: {
-      short: "Trend",
+    stability: {
+      short: "Stability",
       help:
-        "Least-squares fit of this term's similarity to the query against " +
-        "publication year, shown per century, with r² for how cleanly the " +
-        'books follow it. Ranking by "Most drift" sorts on the two combined.',
+        "How consistently this term stays near the query across the whole " +
+        "corpus. Measured corpus-wide, so it is not an average of the values " +
+        "in this row.",
+    },
+    instability: {
+      short: "Instability",
+      help:
+        "How much this term's closeness to the query varies across the whole " +
+        "corpus. Measured corpus-wide, so it is not an average of the values " +
+        "in this row.",
     },
   },
 };

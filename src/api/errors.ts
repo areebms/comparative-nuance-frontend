@@ -1,10 +1,11 @@
-import type {
-  BookResponse,
-  Reason,
-  ReasonBody,
-  ExpressionAbsentResponse,
-  QueryInTooFewBooksResponse,
-  TermResolutionResponse,
+import {
+  MIN_BOOKS_FOR_COMPARISON,
+  type BookResponse,
+  type Reason,
+  type ReasonBody,
+  type ExpressionAbsentResponse,
+  type QueryInTooFewBooksResponse,
+  type TermResolutionResponse,
 } from "../types/api";
 
 export type ErrorKind =
@@ -17,9 +18,7 @@ export type ErrorKind =
 export class ApiError extends Error {
   kind: ErrorKind;
   status: number;
-  /** The parsed body: a ReasonBody for the 404s, FastAPI's shape otherwise. */
   data: unknown;
-  /** Declared here because the ES2020 lib's Error has no `cause`. */
   cause: unknown;
 
   constructor(
@@ -30,7 +29,7 @@ export class ApiError extends Error {
       cause = null,
     }: { status?: number; data?: unknown; cause?: unknown } = {},
   ) {
-    super(`${kind} (${status})`); // developer-facing; never rendered
+    super(`${kind} (${status})`);
     this.name = "ApiError";
     this.kind = kind;
     this.status = status;
@@ -43,7 +42,6 @@ export function unwrapReason(body: unknown): ReasonBody | null {
   return (body as ReasonBody | null)?.reason ? (body as ReasonBody) : null;
 }
 
-/** "'a'" / "'a' and 'b'" / "'a', 'b' and 'c'" */
 function quoteList(terms: string[] | undefined): string {
   const quoted = (terms ?? []).map((t) => `'${t}'`);
   if (quoted.length <= 1) return quoted[0] ?? "";
@@ -90,8 +88,8 @@ export function describeDriftError(
       return {
         severity: "info",
         message: label
-          ? `Fewer than two books use '${queryLabel}', so there is nothing to compare with ${label}. Try a more common term, or unpin ${label}.`
-          : `Fewer than two of these books use '${queryLabel}', so there is nothing to compare. Try a more common term.`,
+          ? `Fewer than ${MIN_BOOKS_FOR_COMPARISON} books use '${queryLabel}', so there is nothing to compare with ${label}. Try a more common term, or unpin ${label}.`
+          : `Fewer than ${MIN_BOOKS_FOR_COMPARISON} of these books use '${queryLabel}', so there is nothing to compare. Try a more common term.`,
       };
     }
 

@@ -10,14 +10,19 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { buildDiachronicSeries } from "./DiachronicChart/series";
+import {
+  buildDiachronicSeries,
+  isDrawn,
+  CHART_TERM_LIMIT,
+} from "./DiachronicChart/series";
 import { QUERY_STROKE_W, NEIGHBOUR_STROKE_W } from "./DiachronicChart/layout";
+import { INK } from "./DiachronicChart/palette";
 import { labels } from "../content/labels";
 
 export default function DriftTable({ payload, allBooks, sort }) {
   const { series, roster } = useMemo(
-    () => buildDiachronicSeries(payload, allBooks),
-    [payload, allBooks],
+    () => buildDiachronicSeries(payload, allBooks, null, sort),
+    [payload, allBooks, sort],
   );
 
   if (!series.length) {
@@ -31,7 +36,6 @@ export default function DriftTable({ payload, allBooks, sort }) {
   const rows = [...series].sort(
     (a, b) => Number(b.isQuery) - Number(a.isQuery),
   );
-  const bySimilarity = sort === "mean_similarity";
 
   return (
     <TableContainer>
@@ -40,9 +44,7 @@ export default function DriftTable({ payload, allBooks, sort }) {
           <TableRow>
             <TableCell sx={HEAD}>Term</TableCell>
             <TableCell align="right" sx={HEAD}>
-              <HelpLabel
-                {...(bySimilarity ? labels.columns.similarity : labels.columns.trend)}
-              />
+              <HelpLabel {...labels.columns[sort]} />
             </TableCell>
             {roster.map((b) => (
               <TableCell key={b.id} align="right" sx={HEAD}>
@@ -58,14 +60,10 @@ export default function DriftTable({ payload, allBooks, sort }) {
             return (
               <TableRow key={s.term} hover>
                 <TableCell>
-                  <TermCell series={s} />
+                  <TermCell series={s} sort={sort} />
                 </TableCell>
                 <TableCell align="right">
-                  {bySimilarity ? (
-                    <SimilarityCell stats={s.stats} />
-                  ) : (
-                    <TrendCell stats={s.stats} />
-                  )}
+                  <RankStatCell stats={s.stats} sort={sort} />
                 </TableCell>
                 {roster.map((b) => {
                   const p = byBook.get(b.id);
@@ -114,39 +112,36 @@ function SeriesSwatch({ color, isQuery }) {
   );
 }
 
-function TermCell({ series }) {
-  const tags = series.stats?.tags ?? [];
+function TermCell({ series, sort }) {
+  const drawn = isDrawn(series);
   const term = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <SeriesSwatch color={series.color} isQuery={series.isQuery} />
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: series.isQuery ? 700 : 500 }}
-        >
-          {series.term}
-        </Typography>
-        {tags.length > 0 && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: "block" }}
-          >
-            {tags.map((t) => POS_NAMES[t] ?? t).join(" · ")}
-          </Typography>
-        )}
-      </Box>
+      <SeriesSwatch
+        color={drawn ? series.color : INK.axis}
+        isQuery={series.isQuery}
+      />
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: series.isQuery ? 700 : 500 }}
+      >
+        {series.term}
+      </Typography>
     </Box>
   );
 
   if (!series.stats) return term;
 
-  const { mean_similarity, n_books_with_term } = series.stats;
+  const { n_books_in } = series.stats;
+  const value = series.stats[sort];
+  const { short } = labels.columns[sort];
   return (
     <Tooltip
       title={
-        `Similarity to the query: ${mean_similarity.toFixed(3)}, averaged over ` +
-        `the ${n_books_with_term} book${n_books_with_term === 1 ? "" : "s"} that use it.`
+        `${short} ${value.toFixed(3)}, across the ${n_books_in} ` +
+        `book${n_books_in === 1 ? "" : "s"} that use it.` +
+        (drawn
+          ? ""
+          : ` Not drawn in the chart, which shows the ${CHART_TERM_LIMIT} ${labels.comparativeTerms.sorts[sort]} terms.`)
       }
     >
       <Box sx={{ cursor: "help", display: "inline-block" }}>{term}</Box>
@@ -154,46 +149,19 @@ function TermCell({ series }) {
   );
 }
 
-function TrendCell({ stats }) {
+function RankStatCell({ stats, sort }) {
   if (!stats) return <Dash />;
-  if (stats.slope === 0 && stats.r_squared === 0) {
-    return (
-      <Typography variant="body2" color="text.disabled">
-        no fit
-      </Typography>
-    );
-  }
-  const perCentury = stats.slope * 100;
   return (
     <>
       <Typography variant="body2" sx={NUM}>
-        {perCentury > 0 ? "+" : "−"}
-        {Math.abs(perCentury).toFixed(3)}
+        {stats[sort].toFixed(3)}
       </Typography>
       <Typography
         variant="caption"
         color="text.secondary"
         sx={{ ...NUM, display: "block" }}
       >
-        r² {stats.r_squared.toFixed(2)}
-      </Typography>
-    </>
-  );
-}
-
-function SimilarityCell({ stats }) {
-  if (!stats) return <Dash />;
-  return (
-    <>
-      <Typography variant="body2" sx={NUM}>
-        {stats.mean_similarity.toFixed(3)}
-      </Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ ...NUM, display: "block" }}
-      >
-        {stats.n_books_with_term} book{stats.n_books_with_term === 1 ? "" : "s"}
+        {stats.n_books_in} book{stats.n_books_in === 1 ? "" : "s"}
       </Typography>
     </>
   );
@@ -257,8 +225,6 @@ const Dash = () => (
     --
   </Typography>
 );
-
-const POS_NAMES = { N: "noun", V: "verb", J: "adjective", R: "adverb" };
 
 const HEAD = { fontWeight: 700 };
 const NUM = { fontVariantNumeric: "tabular-nums" };

@@ -38,6 +38,8 @@ Users compose structured vector queries via a chip-based expression builder, tra
 
 A chip-based autocomplete wired to the backend vocabulary. Terms, operators (`+`, `-`), and parentheses are composed as discrete tokens. The parser validates structure in real time before any query is sent.
 
+The vocabulary comes from `GET /terms`, sorted by how many books use each term (`TermResponse.books.length`). That field is `number[]` — the same book ids `GET /books` returns, so it joins directly against `BookResponse.id`. Only `.length` is read today, but the ids are there if the actual book list behind a term is ever worth showing.
+
 Addition narrows context when a term has multiple meanings. `capital + profit` pulls "capital" toward its economic sense and away from the geographical one. Subtraction creates contrast directions:
 
 ```text
@@ -55,6 +57,10 @@ The user never stays in describe mode after submitting. It is a translation step
 Recharts line chart with books along the x-axis in publication order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is how closely that term keeps the same company in each book, with a shaded 95% confidence band from the backend model ensemble. The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
 
 A line that drifts as it moves right is a term keeping different company in later books than earlier ones.
+
+### Comparative-terms sort
+
+A top-bar control chooses which ten terms are drawn alongside the query, carried in `?sort`. **Stable** (`stability`) and **Unstable** (`instability`) are both already present on every term the backend returns, so switching is a pure client-side re-rank — no re-fetch, and both the chart's top ten and the table's second column reorder together.
 
 ### Drift table
 
@@ -81,7 +87,7 @@ More detail on how users interact with these features: [user guide in the backen
 One request draws the whole chart. `useSemanticDrift` posts the parsed expression to `/semantic-drift/{source_book_id}` when a book is pinned, or `/semantic-drift` when none is, and gets back the same `SemanticDriftResponse` either way:
 
 - `expr` — the query's own line (`{ expr, terms, books }`)
-- `nearest_terms` — one neighbour line each; how many is the server's call
+- `comparative_terms` — one neighbour line each; how many is the server's call
 - `books` — the roster: every book the request named, measured or not
 
 The response is already one row per **term**, which is what the chart draws, so it is consumed as-is rather than reshaped. Absence is expressed by omission: a book appears on a line only if that line measured it, so `series.ts` derives each line's gaps by walking the roster.
@@ -93,11 +99,11 @@ A 404 is one of two **results**, not failures, and they are told apart by `reaso
 | `reason` | meaning |
 | --- | --- |
 | `expression_absent` | the pinned book's vocabulary lacks a leaf of the expression (carries `book_id` and the missing `terms`) |
-| `query_in_too_few_books` | fewer than two books carry the query — reachable while unpinned, where `book_id` is `null` |
+| `query_in_too_few_books` | fewer than four of the requested books carry the query — reachable while unpinned, where `book_id` is `null`. The pinned book does not count toward the four |
 
 Both render as an `info` alert naming the actual book and words. `src/api/errors.ts` holds the `ApiError` carrier and the composers that turn one into a sentence; structure and copy are separate because naming a book needs the corpus, which the fetch layer does not have.
 
-**Nothing is ever retried.** The backend runs heavy synchronous work on a single worker, so a retry doubles load on an already-stuck server and delays the error the reader needs. `main.tsx` turns off `retry`, `retryOnMount`, `refetchOnWindowFocus` and `refetchOnReconnect` globally, and no query overrides it. Responses are cached by expression, pinned book and target set.
+**Retries are for cold starts only.** The API is a Lambda behind a Function URL, so the first request after an idle period can fail on a timeout that says nothing about the query. `main.tsx` retries **once**, after 2s, and only when the failure could be transient — a network error or a 5xx. A 4xx is a deterministic answer about the expression itself, so retrying one would just delay the message the reader needs; `retryColdStart` returns false for every one of them. `refetchOnWindowFocus` is off, and responses are cached by expression, pinned book and target set, so editing and reverting a query costs nothing.
 
 ```mermaid
 flowchart TD

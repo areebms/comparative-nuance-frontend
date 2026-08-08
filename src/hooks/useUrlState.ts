@@ -55,7 +55,10 @@ export default function useUrlState() {
   const setSelectedBookId = useCallback(
     (book: number | null) => {
       navigate(
-        { pathname: book ? `/${VIEW}/${book}` : "/", search: location.search },
+        {
+          pathname: book !== null ? `/${VIEW}/${book}` : "/",
+          search: location.search,
+        },
         { replace: true },
       );
     },

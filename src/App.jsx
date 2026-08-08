@@ -90,7 +90,7 @@ export default function App() {
     isLoading: driftLoading,
     error: driftError,
     queryLabel: driftQueryLabel,
-  } = useSemanticDrift(displayedBookIds, parsedExpression, pinnedBookId, sort);
+  } = useSemanticDrift(displayedBookIds, parsedExpression, pinnedBookId);
 
   const missingBookIds = useMemo(() => {
     if (!driftPayload) return new Set();
@@ -193,6 +193,7 @@ export default function App() {
                   isLoading={driftLoading}
                   hasError={Boolean(driftAlert)}
                   allBooks={allBooks}
+                  sort={sort}
                 />
               </Box>
             </Paper>
