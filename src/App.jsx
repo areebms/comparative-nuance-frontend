@@ -7,7 +7,6 @@ import {
   Typography,
   CssBaseline,
   ThemeProvider,
-  createTheme,
   IconButton,
 } from "@mui/material";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -24,20 +23,9 @@ import {
 import { describeDriftError } from "./api/errors";
 import useUrlState from "./hooks/useUrlState";
 import { parseExpression } from "./utils/vectorExpressionParser";
+import { theme } from "./theme";
 
 const GuideModal = lazy(() => import("./components/GuideModal"));
-
-const theme = createTheme({
-  palette: {
-    primary: { main: "#4e79a7" },
-    secondary: { main: "#e15759" },
-    background: { default: "#f6f7fb", paper: "#ffffff" },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-  },
-  shape: { borderRadius: 12 },
-});
 
 export default function App() {
   const {
@@ -52,10 +40,9 @@ export default function App() {
     () => parseExpression(expression),
     [expression],
   );
-  const [guideOpen, setGuideOpen] = useState(false);
-  const [guideMounted, setGuideMounted] = useState(false);
 
-  // Data fetching
+  const [guideOpen, setGuideOpen] = useState(null);
+
   const { data: allBooks = [], isSuccess: booksLoaded } = useBooks();
 
   const describeMutation = useParseDescribeQuery();
@@ -129,10 +116,7 @@ export default function App() {
           onSortChange={setSort}
           onDescribeSubmit={handleDescribeSubmit}
           describeSubmitting={describeMutation.isPending}
-          onHelpClick={() => {
-            setGuideMounted(true);
-            setGuideOpen(true);
-          }}
+          onHelpClick={() => setGuideOpen(true)}
         />
 
         <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -173,7 +157,7 @@ export default function App() {
               display: "flex",
               flexDirection: { xs: "column", md: "row" },
               gap: 2,
-              alignItems: "flex-start",
+              alignItems: { xs: "stretch", md: "flex-start" },
               mb: 2,
             }}
           >
@@ -208,7 +192,7 @@ export default function App() {
           </Paper>
         </Container>
 
-        {guideMounted && (
+        {guideOpen !== null && (
           <Suspense fallback={null}>
             <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
           </Suspense>

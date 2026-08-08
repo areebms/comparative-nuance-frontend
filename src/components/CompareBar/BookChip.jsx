@@ -12,7 +12,8 @@ export default function BookChip({ label, active, selected, onSelect, clickable 
       onClick={clickable ? onSelect : undefined}
       icon={selected ? <PushPinIcon /> : undefined}
       sx={{
-        width: "100%",
+        width: { xs: "auto", md: "100%" },
+        flexShrink: { xs: 0, md: "unset" },
         justifyContent: "flex-start",
         bgcolor: selected ? QUERY_COLOR : "transparent",
         color: selected ? "#fff" : active ? "text.primary" : "grey",
@@ -20,7 +21,6 @@ export default function BookChip({ label, active, selected, onSelect, clickable 
         borderColor: selected ? QUERY_COLOR : active ? "divider" : "grey",
         fontWeight: selected ? 700 : 600,
         opacity: active ? 1 : 0.5,
-        // The pin icon only renders when selected, so it is always on the fill.
         "& .MuiChip-icon": { color: "#fff" },
         "& .MuiChip-label": { px: 1.5 },
       }}
