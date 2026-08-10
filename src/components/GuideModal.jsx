@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import DifferenceIcon from "@mui/icons-material/Difference";
 import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import SearchIcon from "@mui/icons-material/Search";
+import { labels } from "../content/labels";
 
 function ExpressionChip({ label }) {
   return (
@@ -121,9 +122,7 @@ function ExploreStep() {
           <Typography variant="body2" color="text.secondary">
             Search a word to see which concepts surround it across texts by
             Smith, Ricardo, Mill, Steuart, and Bastiat. Compare associations to
-            spot shared vocabulary and track how ideas shift over time. Books
-            are color-coded chronologically: warmer tones for earlier writers,
-            cooler for later ones.
+            spot shared vocabulary and track how ideas shift over time.
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
@@ -158,16 +157,32 @@ function ExploreStep() {
           title="Reading the chart"
         >
           <Typography variant="body2" color="text.secondary">
-            Each row represents a related term. The position of the dots
-            indicates the association between the term usage for a given book
-            and your query. Further right indicates a stronger association. The
-            horizontal line represents the confidence range.
+            Books run along the horizontal axis in order of publication, so
+            reading left to right is reading forward in time. Each line follows
+            one term: your query, plus the terms used closest to it. Height shows
+            how closely that term keeps the same company in each book, and the
+            shaded band around it is the confidence range.
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Divergence across books on the same row indicates a measurable
-            difference in how the term is used. That divergence is the starting
-            point for analysis. Is the meaning of the word shifting over time?
-            Is the book's author engaged in a different debate?
+            A line that drifts as it moves right is the thing to look at: the
+            term is keeping different company in later books than in earlier
+            ones. That drift is the starting point for analysis. Is the meaning
+            of the word shifting over time? Is the author engaged in a different
+            debate?
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Pin a book from the rail on the left to read every line relative to
+            that author. With nothing pinned, each book is instead compared
+            against all the others, showing how typical its usage is.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            The "{labels.comparativeTerms.label}" dropdown decides which of
+            those companion terms get drawn. "{labels.comparativeTerms.sorts.stability}"
+            ranks them by how consistently each one sits near your query
+            across the whole corpus. "{labels.comparativeTerms.sorts.instability}"
+            ranks the same terms by how much that closeness varies from book
+            to book instead — the lines with something to say about change
+            rather than about resemblance.
           </Typography>
         </GuideCard>
       </Stack>
@@ -268,10 +283,6 @@ export default function GuideModal({ open, onClose }) {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const StepContent = steps[activeStep];
 
-  useEffect(() => {
-    if (open) setActiveStep(0);
-  }, [open]);
-
   return (
     <Dialog
       open={open}
@@ -279,6 +290,7 @@ export default function GuideModal({ open, onClose }) {
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
+      TransitionProps={{ onExited: () => setActiveStep(0) }}
       PaperProps={{
         sx: { borderRadius: { xs: 0, sm: 2.5 } },
       }}

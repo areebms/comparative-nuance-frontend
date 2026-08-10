@@ -1,17 +1,9 @@
-/**
- * Parses vector algebra expressions like "labour + (productive - unproductive)"
- * into a nested OperationTree:
- *   { op: "+", args: [{ term: "labour" }, { op: "-", args: [{ term: "productive" }, { term: "unproductive" }] }] }
- *
- * A bare term returns { term: "labour" }.
- * Returns null on parse failure.
- */
-
 import type { OperationTree } from "../types/vectorExpression";
 
 const TOKEN_PATTERN = /[()+-]|[^\s()+-]+/g;
 
-export const tokenize = (expression: string): string[] => expression.match(TOKEN_PATTERN) ?? [];
+export const tokenize = (expression: string): string[] =>
+  expression.match(TOKEN_PATTERN) ?? [];
 
 function parseTokens(tokens: string[]): OperationTree | null {
   let cursor = 0;
@@ -33,8 +25,10 @@ function parseTokens(tokens: string[]): OperationTree | null {
   const binaryExpression = (): OperationTree | null => {
     let left = primary();
 
-    while (left && (peek() === "+" || peek() === "-")) {
-      const operator = take();
+    while (left) {
+      const operator = peek();
+      if (operator !== "+" && operator !== "-") break;
+      cursor++;
       const right = primary();
       left = right ? { op: operator, args: [left, right] } : null;
     }
@@ -53,27 +47,12 @@ export function parseExpression(input: string): OperationTree | null {
   return expression ? parseTokens(tokenize(expression)) : null;
 }
 
-/**
- * Extracts all term strings from a parsed OperationTree.
- */
-export function extractTerms(tree: OperationTree | null): string[] {
-  if (!tree) return [];
-  const terms = [];
-  const stack = [tree];
+export function stringifyExpression(tree: OperationTree | null): string {
+  if (!tree) return "";
+  if ("term" in tree) return tree.term;
 
-  while (stack.length) {
-    const node = stack.pop();
-    if (!node) continue;
-    if ("term" in node) {
-      terms.push(node.term);
-      continue;
-    }
-    if (node.args) {
-      for (let i = node.args.length - 1; i >= 0; i--) {
-        stack.push(node.args[i]);
-      }
-    }
-  }
-
-  return terms;
+  const [left, right] = tree.args;
+  const rightText = stringifyExpression(right);
+  const rightNeedsParens = Boolean(right) && !("term" in right);
+  return `${stringifyExpression(left)} ${tree.op} ${rightNeedsParens ? `(${rightText})` : rightText}`;
 }

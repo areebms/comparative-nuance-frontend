@@ -1,4 +1,5 @@
-import type { Option, TermEntry } from "../types/vectorExpression";
+import type { Option } from "../types/vectorExpression";
+import type { TermResponse } from "../types/api";
 
 const OPERATORS = new Set(["+", "-", "(", ")"]);
 const MAX_SUGGESTIONS = 12;
@@ -17,7 +18,7 @@ export function isAfterTermOrClose(expressionItems: string[]): boolean {
   return isTerm(last) || last === ")";
 }
 
-export function buildOptions(expressionItems: string[], allTerms: TermEntry[], filter: string): Option[] {
+export function buildOptions(expressionItems: string[], allTerms: TermResponse[], filter: string): Option[] {
   const expressionState = expressionItems.reduce(
     (state, item) => {
       if (item === "(") { state.unclosedGroups++; state.hasGroup = true; }

@@ -1,39 +1,50 @@
+import { LOCAL_ANCHOR_FLOOR } from "../types/api";
+import type { DriftSort } from "../types/api";
+
 export const labels = {
-  contextScore: {
-    label: "Context score",
-    technical: "Cosine similarity",
-    tooltip:
-      "Cosine similarity between your query vector and a term vector. Higher values mean the terms are used in more similar contexts.",
+  typicality: {
+    label: "Definition Genericness",
+    pinned: (bookLabel: string) => `Neighbourhood agreement with ${bookLabel}`,
   },
 
-  consensus: {
-    label: "Consensus",
-    technical: "Mean cosine similarity",
-    tooltip:
-      "Average context score across selected books. Higher values mean the term is strongly associated with your query across the selected texts.",
+  comparativeTerms: {
+    label: "Comparative Terms",
+    sorts: {
+      stability: "Stable",
+      instability: "Unstable",
+    } satisfies Record<DriftSort, string>,
   },
 
-  divergence: {
-    label: "Divergence",
-    technical: "Standard deviation",
-    tooltip:
-      "How much the association varies across books. High values show divergence. If the pattern also follows chronology, it may suggest semantic drift.",
+  gaps: {
+    absent: {
+      short: "not in text",
+      detail: (terms: string[]) =>
+        `This book never uses ${terms.map((t) => `"${t}"`).join(" or ")}.`,
+    },
+    too_few_anchors: {
+      short: "too few shared words",
+      detail: () =>
+        `This book uses every word of the term, but shares fewer than ` +
+        `${LOCAL_ANCHOR_FLOOR} other words with any book it could be read ` +
+        `against -- too little common ground to place them.`,
+    },
+    unscored: {
+      short: "not measured",
+      detail: () =>
+        "This book has the vocabulary, but no comparison against it produced " +
+        "a score.",
+    },
   },
 
-  relativeEmphasis: {
-    label: "Relative emphasis",
-    technical: "z-score",
-    tooltip:
-      "How much more emphasis the selected book places on this term relative to the average across selected books.",
+  columns: {
+    stability: {
+      short: "Stability",
+      help: "Gated Mean",
+    },
+    instability: {
+      short: "Instability",
+      help: "Gated Variance",
+    },
+    booksGroup: "Definitional Genericness within Corpus",
   },
-
-  confidenceRange: {
-    label: "Confidence range",
-    technical: "95% CI",
-    tooltip:
-      "How consistently this relationship appears across independently trained models. Tight ranges are more stable; wide ranges should be interpreted cautiously.",
-  },
-
-  chartOverview:
-    "Each row is a term used in similar contexts to your query. Dots farther right have a higher context score. Different colors show different books. Black dots show the average across books. Wider confidence ranges mean the result is less stable across model runs.",
 };
