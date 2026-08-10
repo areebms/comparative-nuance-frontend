@@ -1,7 +1,7 @@
 const SERIES_COLOR = [255, 74, 3];
 
 const OPACITY_MAX = 1;
-const OPACITY_MIN = 0.05;
+const OPACITY_MIN = 0.2;
 
 export function seriesColor(rank: number, total: number): string {
   const [r, g, b] = SERIES_COLOR;

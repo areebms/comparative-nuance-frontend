@@ -56,11 +56,6 @@ export default function TopBar({
       }}
     >
       <Toolbar sx={{ width: "100%", py: 1 }}>
-        {/* ONE tree for both layouts, rearranged by grid areas rather than
-            written twice and toggled with `display`. Two copies would each hold
-            their own VectorExpressionInput state -- draft expression, input
-            mode, describe notice -- so crossing the breakpoint would swap in
-            whatever the hidden copy was last left with. */}
         <Box
           sx={{
             display: "grid",
@@ -68,18 +63,12 @@ export default function TopBar({
             alignItems: "center",
             columnGap: 2,
             rowGap: 1.5,
-            // The expression input is the one thing that must be able to grow,
-            // so it keeps the only flexible track; the sort control takes its
-            // own `auto` track rather than sharing, so it holds its width.
             gridTemplateColumns: {
               xs: "minmax(0, 1fr) auto",
               lg: "auto minmax(0, 1fr) auto auto",
             },
-            // Narrow: logo and help share a row, then the input, then the sort
-            // control on its own row -- at these widths the input is already
-            // the tightest thing on screen. Wide: a single horizontal row.
             gridTemplateAreas: {
-              xs: `"logo help" "input input" "sort sort"`,
+              xs: `"logo help" "input sort"`,
               lg: `"logo input sort help"`,
             },
           }}

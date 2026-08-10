@@ -122,9 +122,7 @@ function ExploreStep() {
           <Typography variant="body2" color="text.secondary">
             Search a word to see which concepts surround it across texts by
             Smith, Ricardo, Mill, Steuart, and Bastiat. Compare associations to
-            spot shared vocabulary and track how ideas shift over time. Books
-            are color-coded chronologically: warmer tones for earlier writers,
-            cooler for later ones.
+            spot shared vocabulary and track how ideas shift over time.
           </Typography>
 
           <Typography variant="body2" color="text.secondary">

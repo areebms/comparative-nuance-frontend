@@ -2,7 +2,7 @@
 
 A React/TypeScript application that turns a complex ML backend into a usable research workflow.
 
-Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and trace how those expressions drift across authors through a custom SVG chart with 95% confidence intervals. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
+Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and trace how those expressions drift across authors through a diachronic chart with 95% confidence intervals. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
 
 **Live demo:** https://www.embedding-analytics.com
 **Backend repo:** https://github.com/areebms/embedding-analytics
@@ -25,7 +25,7 @@ Users compose structured vector queries via a chip-based expression builder, tra
 | Area | Tools |
 |---|---|
 | Framework | React, TypeScript, Vite |
-| UI | MUI, custom SVG charts |
+| UI | MUI, Recharts with custom SVG marks |
 | Data fetching | TanStack Query (queries, mutations) |
 | State | Custom hooks, typed expression parser |
 | Backend | FastAPI on AWS Lambda (separate repo) |
@@ -54,31 +54,10 @@ The user never stays in describe mode after submitting. It is a translation step
 
 ### Diachronic drift chart
 
-Recharts line chart with books along the x-axis in publication order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is how closely that term keeps the same company in each book, with a shaded 95% confidence band from the backend model ensemble. The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
+Recharts line chart on a continuous **publication-year** x-axis, so books sit at their real distance in time rather than in evenly spaced rank order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is how closely that term keeps the same company in each book, with a shaded 95% confidence band from the backend model ensemble. That height is a *local mean cosine similarity* — a Pearson correlation between two books' similarity profiles over the query's 75 nearest shared terms, not a cosine between two book vectors, which is why it can legitimately go negative and why the y-axis is never clamped at zero ([the backend documents the measurement](https://github.com/areebms/embedding-analytics/blob/main/docs/internals.md#what-the-score-measures)). The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
 
-A line that drifts as it moves right is a term keeping different company in later books than earlier ones.
+A line that slopes as it moves right is a term keeping different company in later books than earlier ones.
 
-### Comparative-terms sort
-
-A top-bar control chooses which ten terms are drawn alongside the query, carried in `?sort`. **Stable** (`stability`) and **Unstable** (`instability`) are both already present on every term the backend returns, so switching is a pure client-side re-rank — no re-fetch, and both the chart's top ten and the table's second column reorder together.
-
-### Drift table
-
-The numbers behind the chart, reusing the chart's own series selector so every row maps to a mark above. Pinned, one row per neighbour line; unpinned, one row per book.
-
-### Book rail and pinning
-
-Pin a single author to read every line relative to that book; with nothing pinned, each book is scored against the mean of its peers instead. Books with no data for the current expression are greyed out and unpinnable. Color assignments derive from publication year, naturally supporting chronological comparison.
-
-### Guide modal
-
-Card-based two-step walkthrough with MobileStepper navigation. Covers reading the chart, building expressions, and using describe mode.
-
-### Responsive topbar
-
-Desktop: legend, expression input, and help button share one row. Mobile: logo and help icon on top, input centered, legend below.
-
-More detail on how users interact with these features: [user guide in the backend repo](https://github.com/areebms/embedding-analytics/blob/main/docs/guide.md)
 
 ---
 
@@ -134,36 +113,38 @@ Product workflow:
 src/
 ├── App.jsx
 ├── main.tsx
+├── theme.ts                        # MUI theme + the one font stack layout.ts measures against
 ├── api/
 │   ├── queries.ts                  # TanStack Query hooks: semantic drift, books, terms, describe
 │   └── errors.ts                   # ApiError carrier + the composers that turn one into copy
 ├── components/
 │   ├── DiachronicChart/
-│   │   ├── index.jsx               # The Recharts chart itself
+│   │   ├── index.jsx               # Suspense boundary; the chart itself is a lazy chunk
+│   │   ├── Chart.jsx               # The Recharts chart
+│   │   ├── ChartMessage.jsx        # Spinner and empty/error states, at chart height
 │   │   ├── series.ts               # Payload -> one series per term; shared with DriftTable
-│   │   ├── chartModel.ts           # Series -> Recharts rows, domains, ticks
-│   │   ├── marks.jsx               # The two custom marks: dots and on-chart term labels
-│   │   ├── palette.ts
-│   │   └── SeriesSwatch.jsx
-│   ├── HighlightBar/
+│   │   ├── types.ts                # The series shapes both the chart and the table read
+│   │   ├── layout.ts               # Chart geometry + label measuring, importable without recharts
+│   │   ├── marks.jsx               # Custom dots, bands, and on-chart term labels
+│   │   └── palette.ts
+│   ├── CompareBar/
 │   │   ├── index.jsx
 │   │   └── BookChip.jsx
 │   ├── TopBar/
 │   │   ├── index.jsx
-│   │   └── VectorExpressionInput.tsx
+│   │   ├── VectorExpressionInput.tsx
+│   │   └── ComparativeTermsSort.tsx # "Stable" / "Unstable"
 │   ├── DriftTable.jsx
-│   ├── CenteredMessage.jsx
 │   └── GuideModal.jsx
 ├── content/
 │   └── labels.ts                   # The copy the chart and the table must keep identical
 ├── hooks/
-│   ├── useUrlState.ts              # Expression in ?q, pinned book in the path
+│   ├── useUrlState.ts              # Expression in ?q, sort in ?sort, pinned book in the path
 │   └── useVectorExpression.ts
 ├── types/
 │   ├── api.ts                      # Mirrors the backend's pydantic schemas
 │   └── vectorExpression.ts
 └── utils/
-    ├── scales.ts                   # Year ticks + the chronological colour ramp
     ├── vectorExpressionOptions.ts
     └── vectorExpressionParser.ts
 ```
@@ -183,8 +164,14 @@ Set `VITE_API_URL` to point at the backend API (local or deployed).
 
 ## Deployment (AWS Amplify Hosting)
 
-The build itself is driven by `amplify.yml`. One piece of configuration lives
-outside it: the SPA rewrite.
+The build itself is driven by `amplify.yml`. Two pieces of configuration live
+outside it: the API URL and the SPA rewrite.
+
+`VITE_API_URL` must be set as an Amplify **environment variable**, not in
+`amplify.yml`. Vite inlines it at build time, so it has to exist when
+`npm run build` runs — if it does not, every request goes to `undefined/...`
+and the app fails with a generic "couldn't reach the server" message that
+looks like a backend outage.
 
 The app puts the pinned book in the URL **path** (`/overview/3`), so those
 paths must reach `index.html` for the
@@ -194,9 +181,20 @@ shareable link and every refresh away from `/` fails in production, while
 `npm run dev` works fine because Vite serves `index.html` for any path.
 
 Amplify redirects are app-level settings, not build settings, so they cannot be
-declared in `amplify.yml`. The rule is checked in as `amplify-redirects.json`
-(it matches every path with no file extension, leaving real asset requests
-alone). Apply it once per Amplify app, either way:
+declared in `amplify.yml`. The rule matches every path with no file extension,
+leaving real asset requests alone:
+
+```json
+[
+  {
+    "source": "</^[^.]+$/>",
+    "target": "/index.html",
+    "status": "200"
+  }
+]
+```
+
+Apply it once per Amplify app. Save the above as `amplify-redirects.json` and:
 
 ```bash
 aws amplify update-app \
@@ -216,7 +214,7 @@ navigating to it from `/`) — it should render the app, not a 404.
 
 - Building a product frontend for an AI/ML backend, not just rendering API responses
 - Modelling a chart's entire data contract as one cached request, keyed so that editing and reverting a query is free
-- Designing custom SVG data visualizations that expose uncertainty and support comparison
+- Designing data visualizations that expose uncertainty and support comparison, down to the custom SVG marks Recharts has no native form for
 - Implementing a typed expression model with parsing, validation, and structured state
 - Creating an LLM-assisted input flow with human-in-the-loop verification
 - Shipping responsive, mobile-adapted UI over a technically dense domain

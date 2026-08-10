@@ -39,17 +39,11 @@ export const labels = {
   columns: {
     stability: {
       short: "Stability",
-      help:
-        "How consistently this term stays near the query across the whole " +
-        "corpus. Measured corpus-wide, so it is not an average of the values " +
-        "in this row.",
+      help: "Gated Mean",
     },
     instability: {
       short: "Instability",
-      help:
-        "How much this term's closeness to the query varies across the whole " +
-        "corpus. Measured corpus-wide, so it is not an average of the values " +
-        "in this row.",
+      help: "Gated Variance",
     },
     booksGroup: "Definitional Genericness within Corpus",
   },

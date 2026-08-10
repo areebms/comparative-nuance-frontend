@@ -16,7 +16,7 @@ import type {
   SeriesPoint,
 } from "./types";
 
-export const CHART_TERM_LIMIT = 10;
+export const CHART_TERM_LIMIT = 5;
 
 export const isDrawn = (s: Series) => s.isQuery || s.rank <= CHART_TERM_LIMIT;
 
