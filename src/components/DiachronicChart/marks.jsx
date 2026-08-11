@@ -31,18 +31,7 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
   );
 }
 
-/**
- * What the tooltip shows: the one dot under the pointer, not every term at that
- * book. `activeTerm` is set by SeriesDot, so between dots there is nothing to
- * show and this renders nothing -- the tooltip appears on dots only, in step
- * with the line reveal. Recharts still owns where the box goes.
- *
- * The numbers come off the row Recharts hands us, which is the one nearest the
- * pointer's x. Two books published in the same year share an x, so that row can
- * be the neighbouring book's -- the heading names whichever book the numbers
- * belong to, so the box is always self-consistent.
- */
-export function DotTooltip({ active, payload, activeTerm, color }) {
+export function DotTooltip({ active, payload, activeTerm, color, measure }) {
   const row = payload?.[0]?.payload;
   const point = active && activeTerm ? row?.values?.[activeTerm] : null;
   if (!point) return null;
@@ -79,13 +68,16 @@ export function DotTooltip({ active, payload, activeTerm, color }) {
           style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
         >
           {point.value.toFixed(3)}
-          {lo != null && (
-            <span style={{ color: "#9ca3af" }}>
-              {" "}
-              [{lo.toFixed(3)}, {hi.toFixed(3)}]
-            </span>
-          )}
         </span>
+      </div>
+      <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 2 }}>
+        {measure}
+        {lo != null && (
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>
+            {" · 95% CI ["}
+            {lo.toFixed(3)}, {hi.toFixed(3)}]
+          </span>
+        )}
       </div>
     </Box>
   );

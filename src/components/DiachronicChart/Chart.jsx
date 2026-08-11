@@ -105,8 +105,8 @@ export default function DiachronicChart({
   }
 
   const yTitle = refBook
-    ? labels.typicality.pinned(refBook.label)
-    : labels.typicality.label;
+    ? labels.agreement.pinned(refBook.label)
+    : labels.agreement.label;
   const isDimmed = (t) => activeTerm !== null && activeTerm !== t;
   const querySeries = series.find((s) => s.isQuery);
   const activeSeries = series.find((s) => s.term === activeTerm);
@@ -166,7 +166,11 @@ export default function DiachronicChart({
             cursor={false}
             isAnimationActive={false}
             content={
-              <DotTooltip activeTerm={activeTerm} color={activeSeries?.color} />
+              <DotTooltip
+                activeTerm={activeTerm}
+                color={activeSeries?.color}
+                measure={yTitle}
+              />
             }
           />
 
