@@ -115,7 +115,7 @@ function StepHeader({ title }) {
 function ExploreStep() {
   return (
     <Box>
-      <StepHeader title="Explore the language of classical economics" />
+      <StepHeader title="Compare how different authors use the same word" />
 
       <Stack spacing={2.25}>
         <GuideCard icon={<SearchIcon fontSize="small" />} title="Overview">
@@ -133,22 +133,20 @@ function ExploreStep() {
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
-            If vector expressions feel too complicated, describe your query in
-            plain English and the tool will convert it. For example,{" "}
-            <DescribeBlock>
-              productive vs unproductive labour
-            </DescribeBlock>{" "}
-            will be converted to{" "}
-            <ExpressionChip label="labour + (productive - unproductive)" />. If
-            a term in your description is not found in the corpus, the closest
-            match will be substituted automatically.
+            If expressions feel like too much, switch the input to Describe and
+            write what you want in plain English instead. The next step covers
+            both.
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
-            Results include a confidence range derived from an ensemble of
-            aligned Word2Vec models. Tighter intervals mean stronger confidence,
-            wider intervals mean the word may carry multiple meanings in the
-            text.
+            Every score carries a confidence range, and what it varies depends on
+            how you are reading the corpus. With no book pinned, it is the spread
+            across the other books, so a wide band means the authors themselves
+            disagreed. Pin a book and it becomes the spread across an ensemble of
+            Word2Vec models trained on the same text from different starting
+            points, so a wide band means the models disagreed and the number is
+            not one to lean on. The two are not comparable in width — read each
+            for what it varies.
           </Typography>
         </GuideCard>
 
@@ -160,26 +158,36 @@ function ExploreStep() {
             Books run along the horizontal axis in order of publication, so
             reading left to right is reading forward in time. Each line follows
             one term: your query, plus the terms used closest to it. Height shows
-            how closely that term keeps the same company in each book, and the
-            shaded band around it is the confidence range.
+            how closely that term keeps the same company in each book — its{" "}
+            <b>definitional agreement</b>, which is what the vertical axis
+            measures — and the shaded band around it is the confidence range.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            The vertical axis runs below zero as well as above it. Above zero, a
+            book keeps the company the other books also keep, and the higher it
+            sits the more they agree. Around zero there is little shared context
+            either way. Below zero the book keeps different company from the
+            rest of the corpus for that term.
           </Typography>
           <Typography variant="body2" color="text.secondary">
             A line that drifts as it moves right is the thing to look at: the
             term is keeping different company in later books than in earlier
-            ones. That drift is the starting point for analysis. Is the meaning
-            of the word shifting over time? Is the author engaged in a different
-            debate?
+            ones. That change in agreement along a line is <b>definitional
+            drift</b>, and it is the starting point for analysis — the movement
+            matters more than any single point on it. Is the meaning of the word
+            shifting over time? Is the author engaged in a different debate?
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Pin a book from the rail on the left to read every line relative to
             that author. With nothing pinned, each book is instead compared
-            against all the others, showing how typical its usage is.
+            against all the others, showing how far it agrees with the corpus as
+            a whole.
           </Typography>
           <Typography variant="body2" color="text.secondary">
             The "{labels.comparativeTerms.label}" dropdown decides which of
-            those companion terms get drawn. "{labels.comparativeTerms.sorts.stability}"
+            those companion terms get drawn. "{labels.comparativeTerms.rankings.stability}"
             ranks them by how consistently each one sits near your query
-            across the whole corpus. "{labels.comparativeTerms.sorts.instability}"
+            across the whole corpus. "{labels.comparativeTerms.rankings.instability}"
             ranks the same terms by how much that closeness varies from book
             to book instead — the lines with something to say about change
             rather than about resemblance.
@@ -219,8 +227,8 @@ function QueryingStep() {
             <ExpressionChip label="capital + profit" />
           </Box>
           <Typography variant="body2" color="text.secondary">
-            Pulls "capital" toward its economic sense by combining it with
-            "profit", excluding the geographical meaning.
+            Narrows the context around "capital", pulling it toward its economic
+            sense and away from the geographical one.
           </Typography>
 
           <Typography variant="subtitle2" sx={{ mt: 1 }}>
@@ -261,13 +269,9 @@ function QueryingStep() {
               productive vs unproductive labour
             </DescribeBlock>{" "}
             produces{" "}
-            <ExpressionChip label="labour + (productive - unproductive)" />{" "}
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary">
-            If a term in
-            your description is not found in the corpus, the closest match will
-            be substituted.
+            <ExpressionChip label="labour + (productive - unproductive)" />. If
+            a term in your description is not in the corpus, the closest match
+            is substituted and flagged.
           </Typography>
         </GuideCard>
       </Stack>

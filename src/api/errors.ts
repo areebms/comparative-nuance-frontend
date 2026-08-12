@@ -97,7 +97,7 @@ export function describeDriftError(
       console.error("[drift] 422 rejected the request", error.data);
       return {
         severity: "error",
-        message: "Couldn't load drift data: the request was rejected.",
+        message: "Couldn't load these results: the request was rejected.",
       };
 
     case "network":
@@ -109,7 +109,7 @@ export function describeDriftError(
 
     default:
       console.error("[drift] request failed", error);
-      return { severity: "error", message: "Failed to load drift data." };
+      return { severity: "error", message: "Couldn't load these results." };
   }
 }
 

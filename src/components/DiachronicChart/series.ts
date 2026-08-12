@@ -1,9 +1,9 @@
 import { seriesColor, QUERY_COLOR } from "./palette";
-import { LOCAL_ANCHOR_FLOOR, DEFAULT_DRIFT_SORT } from "../../types/api";
+import { LOCAL_ANCHOR_FLOOR, DEFAULT_TERM_RANKING } from "../../types/api";
 import type {
   BookResponse,
   BookSummary,
-  DriftSort,
+  TermRanking,
   SemanticDriftResponse,
 } from "../../types/api";
 import type {
@@ -24,7 +24,7 @@ export function buildDiachronicSeries(
   payload: SemanticDriftResponse | null,
   allBooks: BookResponse[],
   pinnedBook: BookResponse | null = null,
-  sort: DriftSort = DEFAULT_DRIFT_SORT,
+  ranking: TermRanking = DEFAULT_TERM_RANKING,
 ): DiachronicSeries {
   if (!payload?.books.length || !allBooks.length) {
     return { series: [], roster: [] };
@@ -38,7 +38,7 @@ export function buildDiachronicSeries(
     .sort(byPublishedYear);
 
   const ranked = [...payload.comparative_terms].sort(
-    (a, b) => b[sort] - a[sort],
+    (a, b) => b[ranking] - a[ranking],
   );
 
   const rankedColorCount = Math.min(ranked.length, CHART_TERM_LIMIT);
@@ -81,8 +81,8 @@ export function buildDiachronicSeries(
       if (raw) {
         points.push({
           ...base,
-          similarity: raw.mean_similarity,
-          similarity_ci: raw.similarity_ci,
+          agreement: raw.mean_local_similarity,
+          agreementCi: raw.ci,
           measurement: raw,
         });
       } else {
@@ -126,8 +126,8 @@ export function buildDiachronicSeries(
           id: pinnedBook.id,
           label: pinnedBook.label,
           year: pinnedBook.published_year,
-          similarity: 1,
-          similarity_ci: null,
+          agreement: 1,
+          agreementCi: null,
           measurement: null,
         },
       ].sort(byYear);
@@ -176,14 +176,14 @@ export function buildChartModel(
     values: {},
   }));
 
-  const sims = allPoints.map((d) => d.similarity);
+  const agreements = allPoints.map((d) => d.agreement);
   const years = chartData.map((r) => r.year);
   const yearMin = Math.min(...years);
   const yearMax = Math.max(...years);
-  const simMin = Math.min(...sims);
-  const simMax = Math.max(...sims);
+  const agreementMin = Math.min(...agreements);
+  const agreementMax = Math.max(...agreements);
 
-  let [yMin, yMax] = [Math.max(-1, simMin), Math.min(1, simMax)];
+  let [yMin, yMax] = [Math.max(-1, agreementMin), Math.min(1, agreementMax)];
   if (yMax - yMin < MIN_Y_SPAN) {
     const mid = (yMin + yMax) / 2;
     [yMin, yMax] = [
@@ -200,17 +200,17 @@ export function buildChartModel(
       const row = rowByBookId.get(p.id);
       if (!row) continue;
 
-      const bounds = p.similarity_ci
-        ? ([clamp(p.similarity_ci[0]), clamp(p.similarity_ci[1])] as [
+      const bounds = p.agreementCi
+        ? ([clamp(p.agreementCi[0]), clamp(p.agreementCi[1])] as [
             number,
             number,
           ])
         : undefined;
       row.values[s.term] = {
-        value: p.similarity,
+        agreement: p.agreement,
         band: bounds,
         ci: bounds
-          ? [p.similarity - bounds[0], bounds[1] - p.similarity]
+          ? [p.agreement - bounds[0], bounds[1] - p.agreement]
           : undefined,
       };
     }

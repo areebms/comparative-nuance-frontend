@@ -1,7 +1,7 @@
 import { AppBar, Toolbar, Box, IconButton, Divider } from "@mui/material";
 import HelpCenterIcon from "@mui/icons-material/HelpCenter";
 import VectorExpressionInput from "./VectorExpressionInput";
-import ComparativeTermsSort from "./ComparativeTermsSort";
+import ComparativeTermsRanking from "./ComparativeTermsRanking";
 
 const LogoBox = () => (
   <Box
@@ -37,8 +37,8 @@ const LogoBox = () => (
 export default function TopBar({
   expression,
   onExpressionChange,
-  sort,
-  onSortChange,
+  ranking,
+  onRankingChange,
   onDescribeSubmit,
   describeSubmitting,
   onHelpClick,
@@ -68,8 +68,8 @@ export default function TopBar({
               lg: "auto minmax(0, 1fr) auto auto",
             },
             gridTemplateAreas: {
-              xs: `"logo help" "input sort"`,
-              lg: `"logo input sort help"`,
+              xs: `"logo help" "input ranking"`,
+              lg: `"logo input ranking help"`,
             },
           }}
         >
@@ -84,8 +84,11 @@ export default function TopBar({
             />
           </Box>
 
-          <Box sx={{ gridArea: "sort", justifySelf: "end" }}>
-            <ComparativeTermsSort sort={sort} onSortChange={onSortChange} />
+          <Box sx={{ gridArea: "ranking", justifySelf: "end" }}>
+            <ComparativeTermsRanking
+              ranking={ranking}
+              onRankingChange={onRankingChange}
+            />
           </Box>
 
           <IconButton

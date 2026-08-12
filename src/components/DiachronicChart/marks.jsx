@@ -11,7 +11,7 @@ import {
   termWeight,
 } from "./layout";
 
-export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
+export function SeriesDot({ cx, cy, value, color, r, onEnter, onLeave }) {
   if (cx == null || cy == null || value == null) return null;
   return (
     <circle
@@ -21,7 +21,6 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
       fill={color}
       stroke={INK.surface}
       strokeWidth={1}
-      opacity={dim ? 0.15 : 1}
       // The dot is filled, so it would catch the pointer anyway; saying so keeps
       // the hover from depending on that.
       style={{ pointerEvents: "all" }}
@@ -31,18 +30,7 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
   );
 }
 
-/**
- * What the tooltip shows: the one dot under the pointer, not every term at that
- * book. `activeTerm` is set by SeriesDot, so between dots there is nothing to
- * show and this renders nothing -- the tooltip appears on dots only, in step
- * with the line reveal. Recharts still owns where the box goes.
- *
- * The numbers come off the row Recharts hands us, which is the one nearest the
- * pointer's x. Two books published in the same year share an x, so that row can
- * be the neighbouring book's -- the heading names whichever book the numbers
- * belong to, so the box is always self-consistent.
- */
-export function DotTooltip({ active, payload, activeTerm, color }) {
+export function DotTooltip({ active, payload, activeTerm, color, measure }) {
   const row = payload?.[0]?.payload;
   const point = active && activeTerm ? row?.values?.[activeTerm] : null;
   if (!point) return null;
@@ -62,7 +50,9 @@ export function DotTooltip({ active, payload, activeTerm, color }) {
         whiteSpace: "nowrap",
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 4 }}>{row.book}</div>
+      <div style={{ fontWeight: 700, marginBottom: 4 }}>
+        Usage of {activeTerm} in {row.book}
+      </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
         <span
           style={{
@@ -74,24 +64,37 @@ export function DotTooltip({ active, payload, activeTerm, color }) {
             display: "inline-block",
           }}
         />
-        <span>{activeTerm}</span>
+        <span>{measure}</span>
         <span
           style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
         >
-          {point.value.toFixed(3)}
-          {lo != null && (
-            <span style={{ color: "#9ca3af" }}>
-              {" "}
-              [{lo.toFixed(3)}, {hi.toFixed(3)}]
-            </span>
-          )}
+          {point.agreement.toFixed(3)}
         </span>
       </div>
+      {lo != null && (
+        <div
+          style={{
+            display: "flex",
+            fontSize: 11,
+            marginTop: 2,
+            marginLeft: 14,
+            alignItems: "baseline",
+            gap: 6,
+          }}
+        >
+          <span>{"95% CI"}</span>
+          <span
+            style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
+          >
+            [{lo.toFixed(3)}, {hi.toFixed(3)}]
+          </span>
+        </div>
+      )}
     </Box>
   );
 }
 
-export function SeriesLabels({ series, width, activeTerm, onHover }) {
+export function SeriesLabels({ series, width, onHover }) {
   const plot = usePlotArea();
   const yScale = useYAxisScale();
 
@@ -129,7 +132,6 @@ export function SeriesLabels({ series, width, activeTerm, onHover }) {
               fontSize={LABEL_FONT_SIZE}
               fontWeight={termWeight(s.isQuery)}
               fill={s.color}
-              opacity={activeTerm !== null && activeTerm !== s.term ? 0.25 : 1}
               stroke={INK.surface}
               strokeWidth={3}
               strokeLinejoin="round"
@@ -148,7 +150,7 @@ export function SeriesLabels({ series, width, activeTerm, onHover }) {
 function place(series, width, plot, yScale) {
   const labelled = [];
   for (const s of series) {
-    const y = yScale(s.points[0].similarity);
+    const y = yScale(s.points[0].agreement);
     if (typeof y !== "number" || Number.isNaN(y)) continue;
     const height = labelLines(s.term, s.isQuery, width) * LABEL_LINE_H;
     labelled.push({

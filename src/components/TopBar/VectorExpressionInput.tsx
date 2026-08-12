@@ -64,12 +64,6 @@ function VectorExpressionChips({
   );
 }
 
-/**
- * Resolve free-typed text to a vocabulary term, case-insensitively. Returns an
- * Option so the caller can treat it exactly like a picked one, or null when the
- * text names nothing in the corpus -- there is no term to add, and inventing one
- * would send a word the embeddings have never seen.
- */
 function matchTerm(text: string, allTerms: TermResponse[]): Option | null {
   const needle = text.trim().toLowerCase();
   if (!needle) return null;
@@ -136,11 +130,6 @@ function InputModeControl({
   );
 }
 
-/**
- * `disabledReason` names why the button is greyed out, and becomes its tooltip.
- * A disabled control that gives no reason is indistinguishable from a broken
- * one -- the reader is left guessing which of several rules they tripped.
- */
 function VectorExpressionSubmitButton({
   disabled,
   disabledReason,
@@ -239,9 +228,6 @@ export default function VectorExpressionInput({
   onDescribeSubmit: (message: string) => Promise<ParseDescribeResponse>;
   describeSubmitting: boolean;
 }) {
-  // The vocabulary is fetched here rather than passed down: this input is its
-  // only reader (the dropdown's options and the freeSolo match below), so
-  // threading it through App and TopBar only widened two signatures.
   const { data: allTerms = [] } = useTerms();
   const [mode, setMode] = useState<InputMode>("vector");
   const [draftExpression, setDraftExpression] = useState(expression);
@@ -251,22 +237,11 @@ export default function VectorExpressionInput({
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // `expression` is URL-derived, so it changes from OUTSIDE this input too:
-  // browser Back/Forward, or a term clicked in the results table. Re-seed the
-  // draft when it does. Without this the chips keep showing the previous
-  // expression while the charts plot the new one, and the next Submit silently
-  // reverts the app to the stale draft. Edits to the draft alone don't touch
-  // `expression`, so in-progress typing is never clobbered.
-  //
-  // The usual alternative -- remounting on a `key` -- is not available here: it
-  // would also destroy the describe notice, which handleDescribeSubmit sets in
-  // the same tick that it changes `expression`.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftExpression(expression);
   }, [expression]);
 
-  // Describe mode state
   const [describeMessage, setDescribeMessage] = useState("");
   const [notice, setNotice] = useState<DescribeNotice | null>(null);
 
@@ -304,23 +279,13 @@ export default function VectorExpressionInput({
         const lines = result.substitutions.map(
           (s) => `"${s.original}" resolved to "${s.resolved}"`,
         );
-        // A substitution is what the server DID, not a problem: `info`.
         setNotice({ severity: "info", text: lines.join("; ") });
       }
     } catch (err) {
-      // Everything the fetch layer throws is an ApiError; anything else is a
-      // genuine bug here, and falls through to the generic "unavailable" copy.
       setNotice(describeDescribeError(err instanceof ApiError ? err : null));
     }
   };
 
-  // Swap a rejected term for one of the vocabulary's suggestions. The term may
-  // have been introduced by the LLM rather than typed, so it is not always
-  // present verbatim in the message — append the instruction instead of
-  // silently doing nothing.
-  //
-  // Deliberately does NOT resubmit: a click that quietly re-runs an LLM call
-  // hides both its cost and what changed. The reader presses Submit.
   const applyCandidate = (from: string, to: string) => {
     const pattern = new RegExp(
       `\\b${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
@@ -351,22 +316,12 @@ export default function VectorExpressionInput({
           width: "100%",
         }}
       >
-        {/* Switching mode changes which affordance is on screen and nothing
-            else. It used to clear the draft and `expression` on the way into
-            Describe -- and since `expression` is URL-backed, where the empty
-            string is written out as `?q=` rather than collapsing to the
-            default, that blanked the chart unrecoverably: merely opening this
-            dropdown cost you your query. */}
         <InputModeControl mode={mode} onModeChange={setMode} />
 
         {mode === "vector" ? (
           <>
             <Autocomplete
               freeSolo
-              // Highlights the top filtered option, so Enter commits it through
-              // the normal option path instead of falling through to freeSolo's
-              // raw-string branch. Typing a term and pressing Enter is the
-              // fastest way to use this input; it should not require a click.
               autoHighlight
               disableClearable
               forcePopupIcon={false}
@@ -385,13 +340,6 @@ export default function VectorExpressionInput({
                 }
               }}
               onChange={(_, option) => {
-                // freeSolo hands back a raw STRING when Enter is pressed with no
-                // option highlighted (useAutocomplete's 'createOption' path).
-                // Dropping it silently -- as this once did -- made Enter a no-op
-                // while Submit stayed disabled for the same non-empty input, so
-                // typing rather than clicking was a dead end with no feedback.
-                // Resolve it against the vocabulary instead; a string that names
-                // no term is left in the box for the reader to keep editing.
                 const resolved =
                   typeof option === "string"
                     ? matchTerm(option, allTerms)

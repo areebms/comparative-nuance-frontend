@@ -1,16 +1,13 @@
-import type {
-  BookResponse,
-  BookLocalMeanSimilarity,
-  TermData,
-} from "../../types/api";
+import type { BookResponse, BookAgreement, TermData } from "../../types/api";
 
 export interface SeriesPoint {
   id: number;
   label: string;
   year: number;
-  similarity: number;
-  similarity_ci: [number, number] | null;
-  measurement: BookLocalMeanSimilarity | null;
+  /** Definitional agreement: the API's `mean_local_similarity`, read. */
+  agreement: number;
+  agreementCi: [number, number] | null;
+  measurement: BookAgreement | null;
 }
 
 export type GapCause = "absent" | "too_few_anchors" | "unscored";
@@ -39,7 +36,7 @@ export interface DiachronicSeries {
 }
 
 interface TermValue {
-  value: number;
+  agreement: number;
   band?: [number, number];
   ci?: [number, number];
 }

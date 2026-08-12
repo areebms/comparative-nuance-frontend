@@ -12,7 +12,7 @@ import {
 import GitHubIcon from "@mui/icons-material/GitHub";
 import TopBar from "./components/TopBar";
 import CompareBar from "./components/CompareBar";
-import DriftTable from "./components/DriftTable";
+import ResultsTable from "./components/ResultsTable";
 import DiachronicChart from "./components/DiachronicChart";
 import {
   useBooks,
@@ -31,8 +31,8 @@ export default function App() {
   const {
     expression,
     setExpression,
-    sort,
-    setSort,
+    ranking,
+    setRanking,
     selectedBookId,
     setSelectedBookId,
   } = useUrlState();
@@ -102,7 +102,7 @@ export default function App() {
   const expressionLabel = driftQueryLabel || "...";
   const heading = refBook
     ? `Comparing to the definition of '${expressionLabel}' in ${refBook.label}`
-    : `How generic is each author's definition of '${expressionLabel}'?`;
+    : `How much do the authors agree on the corpus definition of '${expressionLabel}'?`;
 
   return (
     <ThemeProvider theme={theme}>
@@ -112,8 +112,8 @@ export default function App() {
         <TopBar
           expression={expression}
           onExpressionChange={setExpression}
-          sort={sort}
-          onSortChange={setSort}
+          ranking={ranking}
+          onRankingChange={setRanking}
           onDescribeSubmit={handleDescribeSubmit}
           describeSubmitting={describeMutation.isPending}
           onHelpClick={() => setGuideOpen(true)}
@@ -177,7 +177,7 @@ export default function App() {
                   isLoading={driftLoading}
                   hasError={Boolean(driftAlert)}
                   allBooks={allBooks}
-                  sort={sort}
+                  ranking={ranking}
                 />
               </Box>
             </Paper>
@@ -188,7 +188,11 @@ export default function App() {
             elevation={0}
             sx={{ p: 3, borderRadius: 3 }}
           >
-            <DriftTable payload={driftPayload} allBooks={allBooks} sort={sort} />
+            <ResultsTable
+              payload={driftPayload}
+              allBooks={allBooks}
+              ranking={ranking}
+            />
           </Paper>
         </Container>
 

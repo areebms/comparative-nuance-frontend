@@ -1,18 +1,18 @@
 import { LOCAL_ANCHOR_FLOOR } from "../types/api";
-import type { DriftSort } from "../types/api";
+import type { TermRanking } from "../types/api";
 
 export const labels = {
-  typicality: {
-    label: "Definition Genericness",
-    pinned: (bookLabel: string) => `Neighbourhood agreement with ${bookLabel}`,
+  agreement: {
+    label: "Definitional agreement",
+    pinned: (bookLabel: string) => `Definitional agreement with ${bookLabel}`,
   },
 
   comparativeTerms: {
     label: "Comparative Terms",
-    sorts: {
+    rankings: {
       stability: "Stable",
       instability: "Unstable",
-    } satisfies Record<DriftSort, string>,
+    } satisfies Record<TermRanking, string>,
   },
 
   gaps: {
@@ -24,9 +24,9 @@ export const labels = {
     too_few_anchors: {
       short: "too few shared words",
       detail: () =>
-        `This book uses every word of the term, but shares fewer than ` +
+        `This book uses every word of the query, but shares fewer than ` +
         `${LOCAL_ANCHOR_FLOOR} other words with any book it could be read ` +
-        `against -- too little common ground to place them.`,
+        `against — too little common ground to place them.`,
     },
     unscored: {
       short: "not measured",
@@ -39,12 +39,16 @@ export const labels = {
   columns: {
     stability: {
       short: "Stability",
-      help: "Gated Mean",
+      help:
+        "How consistently this term sits near your query across the corpus. " +
+        "Higher values mean that this aspect of the definition is constant across the corpus.",
     },
     instability: {
       short: "Instability",
-      help: "Gated Variance",
+      help:
+        "How much that closeness varies from book to book. Higher means the " +
+        "books disagree about this aspect of the definition.",
     },
-    booksGroup: "Definitional Genericness within Corpus",
+    booksGroup: "Definitional agreement, by book",
   },
 };
