@@ -1,5 +1,5 @@
 import { LOCAL_ANCHOR_FLOOR } from "../types/api";
-import type { DriftSort } from "../types/api";
+import type { TermRanking } from "../types/api";
 
 export const labels = {
   agreement: {
@@ -9,10 +9,10 @@ export const labels = {
 
   comparativeTerms: {
     label: "Comparative Terms",
-    sorts: {
+    rankings: {
       stability: "Stable",
       instability: "Unstable",
-    } satisfies Record<DriftSort, string>,
+    } satisfies Record<TermRanking, string>,
   },
 
   gaps: {

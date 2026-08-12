@@ -5,16 +5,18 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { DRIFT_SORTS, DEFAULT_DRIFT_SORT } from "../types/api";
-import type { DriftSort } from "../types/api";
+import { TERM_RANKINGS, DEFAULT_TERM_RANKING } from "../types/api";
+import type { TermRanking } from "../types/api";
 
 const DEFAULT_EXPRESSION = "market";
 const VIEW = "overview";
 
-function toSort(value: string | null): DriftSort {
-  return (DRIFT_SORTS as readonly string[]).includes(value ?? "")
-    ? (value as DriftSort)
-    : DEFAULT_DRIFT_SORT;
+const RANKING_PARAM = "sort";
+
+function toRanking(value: string | null): TermRanking {
+  return (TERM_RANKINGS as readonly string[]).includes(value ?? "")
+    ? (value as TermRanking)
+    : DEFAULT_TERM_RANKING;
 }
 
 export default function useUrlState() {
@@ -44,9 +46,10 @@ export default function useUrlState() {
     [setParam],
   );
 
-  const sort = toSort(params.get("sort"));
-  const setSort = useCallback(
-    (value: DriftSort) => setParam("sort", value, DEFAULT_DRIFT_SORT),
+  const ranking = toRanking(params.get(RANKING_PARAM));
+  const setRanking = useCallback(
+    (value: TermRanking) =>
+      setParam(RANKING_PARAM, value, DEFAULT_TERM_RANKING),
     [setParam],
   );
 
@@ -68,8 +71,8 @@ export default function useUrlState() {
   return {
     expression,
     setExpression,
-    sort,
-    setSort,
+    ranking,
+    setRanking,
     selectedBookId,
     setSelectedBookId,
   };

@@ -22,19 +22,26 @@ export interface SemanticDriftRequestBody {
   book_ids: number[];
 }
 
-export interface BookLocalMeanSimilarity {
+export interface DefinitionalAgreement {
   book_id: number;
-  mean_similarity: number;
-  similarity_ci: [number, number];
-  count: number;
+  mean_local_similarity: number;
+  ci: [number, number];
+  occurrences: number;
   n_seeds: number;
+}
+
+export interface DefinitionalAgreementToCorpus extends DefinitionalAgreement {
   n_books: number;
 }
+
+export type BookAgreement =
+  | DefinitionalAgreement
+  | DefinitionalAgreementToCorpus;
 
 export interface ExprData {
   expr: string;
   terms: string[];
-  books: BookLocalMeanSimilarity[];
+  books: BookAgreement[];
 }
 
 export interface TermData {
@@ -44,15 +51,12 @@ export interface TermData {
   n_books_in: number;
   n_books_as_top50: number;
   n_books_as_top100: number;
-  books: BookLocalMeanSimilarity[];
+  books: BookAgreement[];
 }
 
-// Client-side ranking only -- both fields are present on every TermData the
-// backend returns, so which one sorts/draws the chart is a display choice,
-// not a request parameter.
-export const DRIFT_SORTS = ["stability", "instability"] as const;
-export type DriftSort = (typeof DRIFT_SORTS)[number];
-export const DEFAULT_DRIFT_SORT: DriftSort = "stability";
+export const TERM_RANKINGS = ["stability", "instability"] as const;
+export type TermRanking = (typeof TERM_RANKINGS)[number];
+export const DEFAULT_TERM_RANKING: TermRanking = "stability";
 
 export interface BookSummary {
   id: number;

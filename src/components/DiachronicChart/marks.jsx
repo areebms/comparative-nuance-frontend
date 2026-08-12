@@ -11,7 +11,7 @@ import {
   termWeight,
 } from "./layout";
 
-export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
+export function SeriesDot({ cx, cy, value, color, r, onEnter, onLeave }) {
   if (cx == null || cy == null || value == null) return null;
   return (
     <circle
@@ -21,7 +21,6 @@ export function SeriesDot({ cx, cy, value, color, r, dim, onEnter, onLeave }) {
       fill={color}
       stroke={INK.surface}
       strokeWidth={1}
-      opacity={dim ? 0.15 : 1}
       // The dot is filled, so it would catch the pointer anyway; saying so keeps
       // the hover from depending on that.
       style={{ pointerEvents: "all" }}
@@ -51,7 +50,9 @@ export function DotTooltip({ active, payload, activeTerm, color, measure }) {
         whiteSpace: "nowrap",
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 4 }}>{row.book}</div>
+      <div style={{ fontWeight: 700, marginBottom: 4 }}>
+        Usage of {activeTerm} in {row.book}
+      </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
         <span
           style={{
@@ -63,27 +64,37 @@ export function DotTooltip({ active, payload, activeTerm, color, measure }) {
             display: "inline-block",
           }}
         />
-        <span>{activeTerm}</span>
+        <span>{measure}</span>
         <span
           style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
         >
-          {point.value.toFixed(3)}
+          {point.agreement.toFixed(3)}
         </span>
       </div>
-      <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 2 }}>
-        {measure}
-        {lo != null && (
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>
-            {" · 95% CI ["}
-            {lo.toFixed(3)}, {hi.toFixed(3)}]
+      {lo != null && (
+        <div
+          style={{
+            display: "flex",
+            fontSize: 11,
+            marginTop: 2,
+            marginLeft: 14,
+            alignItems: "baseline",
+            gap: 6,
+          }}
+        >
+          <span>{"95% CI"}</span>
+          <span
+            style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}
+          >
+            [{lo.toFixed(3)}, {hi.toFixed(3)}]
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </Box>
   );
 }
 
-export function SeriesLabels({ series, width, activeTerm, onHover }) {
+export function SeriesLabels({ series, width, onHover }) {
   const plot = usePlotArea();
   const yScale = useYAxisScale();
 
@@ -121,7 +132,6 @@ export function SeriesLabels({ series, width, activeTerm, onHover }) {
               fontSize={LABEL_FONT_SIZE}
               fontWeight={termWeight(s.isQuery)}
               fill={s.color}
-              opacity={activeTerm !== null && activeTerm !== s.term ? 0.25 : 1}
               stroke={INK.surface}
               strokeWidth={3}
               strokeLinejoin="round"
@@ -140,7 +150,7 @@ export function SeriesLabels({ series, width, activeTerm, onHover }) {
 function place(series, width, plot, yScale) {
   const labelled = [];
   for (const s of series) {
-    const y = yScale(s.points[0].similarity);
+    const y = yScale(s.points[0].agreement);
     if (typeof y !== "number" || Number.isNaN(y)) continue;
     const height = labelLines(s.term, s.isQuery, width) * LABEL_LINE_H;
     labelled.push({

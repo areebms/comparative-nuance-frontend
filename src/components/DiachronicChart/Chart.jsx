@@ -59,13 +59,13 @@ export default function DiachronicChart({
   isLoading,
   hasError,
   allBooks,
-  sort,
+  ranking,
 }) {
   const [activeTerm, setActiveTerm] = useState(null);
 
   const { series: allSeries, roster } = useMemo(
-    () => buildDiachronicSeries(payload, allBooks, refBook, sort),
-    [payload, allBooks, refBook, sort],
+    () => buildDiachronicSeries(payload, allBooks, refBook, ranking),
+    [payload, allBooks, refBook, ranking],
   );
 
   const series = useMemo(() => allSeries.filter(isDrawn), [allSeries]);
@@ -83,7 +83,7 @@ export default function DiachronicChart({
         series.map((s) => [
           s.term,
           {
-            value: (row) => row.values[s.term]?.value,
+            value: (row) => row.values[s.term]?.agreement,
             band: (row) => row.values[s.term]?.band,
             ci: (row) => row.values[s.term]?.ci,
           },
@@ -107,7 +107,6 @@ export default function DiachronicChart({
   const yTitle = refBook
     ? labels.agreement.pinned(refBook.label)
     : labels.agreement.label;
-  const isDimmed = (t) => activeTerm !== null && activeTerm !== t;
   const querySeries = series.find((s) => s.isQuery);
   const activeSeries = series.find((s) => s.term === activeTerm);
 
@@ -180,7 +179,7 @@ export default function DiachronicChart({
               dataKey={accessors.get(querySeries.term).band}
               stroke="none"
               fill={querySeries.color}
-              fillOpacity={isDimmed(querySeries.term) ? 0.06 : 0.15}
+              fillOpacity={0.15}
               connectNulls={false}
               isAnimationActive={false}
               activeDot={false}
@@ -189,7 +188,6 @@ export default function DiachronicChart({
           )}
 
           {series.map((s) => {
-            const dim = isDimmed(s.term);
             const revealed = s.isQuery || activeTerm === s.term;
             return (
               <Line
@@ -199,7 +197,7 @@ export default function DiachronicChart({
                 name={s.term}
                 stroke={s.color}
                 strokeWidth={s.isQuery ? QUERY_STROKE_W : NEIGHBOUR_STROKE_W}
-                strokeOpacity={s.isQuery ? (dim ? 0.15 : 1) : revealed ? 1 : 0}
+                strokeOpacity={revealed ? 1 : 0}
                 connectNulls={false}
                 isAnimationActive={false}
                 activeDot={false}
@@ -208,7 +206,6 @@ export default function DiachronicChart({
                     {...props}
                     color={s.color}
                     r={s.isQuery ? QUERY_DOT_R : NEIGHBOUR_DOT_R}
-                    dim={dim}
                     onEnter={() => setActiveTerm(s.term)}
                     onLeave={() => setActiveTerm(null)}
                   />
@@ -231,7 +228,6 @@ export default function DiachronicChart({
           <SeriesLabels
             series={series}
             width={labelColumn}
-            activeTerm={activeTerm}
             onHover={setActiveTerm}
           />
         </ComposedChart>

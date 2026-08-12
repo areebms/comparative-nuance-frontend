@@ -139,11 +139,14 @@ function ExploreStep() {
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
-            Every score carries a confidence range, derived from an ensemble of
-            Word2Vec models trained on the same book from different starting
-            points. A tight interval means the relationship held across those
-            training runs. A wide one means the models disagreed, so read the
-            value with caution.
+            Every score carries a confidence range, and what it varies depends on
+            how you are reading the corpus. With no book pinned, it is the spread
+            across the other books, so a wide band means the authors themselves
+            disagreed. Pin a book and it becomes the spread across an ensemble of
+            Word2Vec models trained on the same text from different starting
+            points, so a wide band means the models disagreed and the number is
+            not one to lean on. The two are not comparable in width — read each
+            for what it varies.
           </Typography>
         </GuideCard>
 
@@ -155,8 +158,9 @@ function ExploreStep() {
             Books run along the horizontal axis in order of publication, so
             reading left to right is reading forward in time. Each line follows
             one term: your query, plus the terms used closest to it. Height shows
-            how closely that term keeps the same company in each book, and the
-            shaded band around it is the confidence range.
+            how closely that term keeps the same company in each book — its{" "}
+            <b>definitional agreement</b>, which is what the vertical axis
+            measures — and the shaded band around it is the confidence range.
           </Typography>
           <Typography variant="body2" color="text.secondary">
             The vertical axis runs below zero as well as above it. Above zero, a
@@ -168,9 +172,10 @@ function ExploreStep() {
           <Typography variant="body2" color="text.secondary">
             A line that drifts as it moves right is the thing to look at: the
             term is keeping different company in later books than in earlier
-            ones. That drift is the starting point for analysis. Is the meaning
-            of the word shifting over time? Is the author engaged in a different
-            debate?
+            ones. That change in agreement along a line is <b>definitional
+            drift</b>, and it is the starting point for analysis — the movement
+            matters more than any single point on it. Is the meaning of the word
+            shifting over time? Is the author engaged in a different debate?
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Pin a book from the rail on the left to read every line relative to
@@ -180,9 +185,9 @@ function ExploreStep() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             The "{labels.comparativeTerms.label}" dropdown decides which of
-            those companion terms get drawn. "{labels.comparativeTerms.sorts.stability}"
+            those companion terms get drawn. "{labels.comparativeTerms.rankings.stability}"
             ranks them by how consistently each one sits near your query
-            across the whole corpus. "{labels.comparativeTerms.sorts.instability}"
+            across the whole corpus. "{labels.comparativeTerms.rankings.instability}"
             ranks the same terms by how much that closeness varies from book
             to book instead — the lines with something to say about change
             rather than about resemblance.

@@ -2,7 +2,7 @@
 
 A React/TypeScript application that turns a complex ML backend into a usable research workflow.
 
-Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and trace how those expressions drift across authors through a diachronic chart with 95% confidence intervals. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
+Users compose structured vector queries via a chip-based expression builder, translate plain-English questions into editable expressions through an LLM pipeline, and trace **definitional drift** — the change in how far authors agree on a term's sense — across a corpus ordered by publication year, with 95% confidence intervals on every score. Results reflect contextual proximity, not dictionary meaning: two terms score highly because the authors discuss them in similar contexts, not because they are synonyms.
 
 **Live demo:** https://www.embedding-analytics.com
 **Backend repo:** https://github.com/areebms/embedding-analytics
@@ -13,7 +13,7 @@ Users compose structured vector queries via a chip-based expression builder, tra
 
 - **Typed expression model:** Custom parser, hooks, and TypeScript types manage structured vector expressions as first-class state, not raw strings
 - **Single-request chart data:** TanStack Query fetches the whole chart — the query's line, its neighbour lines, and every book's series — in one request, cached by expression and pinned book so editing and reverting a query costs nothing
-- **Data visualization:** Multi-line drift chart on Recharts, read as focus + context — the query is the thick focal line with a shaded confidence band, its neighbours are thin lines that connect only on hover, and each is named by an on-chart label in place of a legend. Where a book never uses a term the line breaks rather than interpolating across it
+- **Data visualization:** Multi-line definitional-drift chart on Recharts, read as focus + context — the query is the thick focal line with a shaded confidence band, its neighbours are thin lines that connect only on hover, and each is named by an on-chart label in place of a legend. Where a book never uses a term the line breaks rather than interpolating across it
 - **LLM-assisted input with human-in-the-loop:** Describe mode translates natural language into editable expression chips so the user always verifies the AI output before relying on it
 - **Responsive layout:** Single-row desktop topbar collapses into a stacked mobile layout without sacrificing functionality
 - **Product-facing technical UX:** Plain-language metric names carry the statistics alongside them (95% CI, seed counts) so the interface stays approachable without hiding the analysis
@@ -54,9 +54,13 @@ The user never stays in describe mode after submitting. It is a translation step
 
 ### Diachronic drift chart
 
-Recharts line chart on a continuous **publication-year** x-axis, so books sit at their real distance in time rather than in evenly spaced rank order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is how closely that term keeps the same company in each book, with a shaded 95% confidence band from the backend model ensemble. That height is a *local mean cosine similarity* — a Pearson correlation between two books' similarity profiles over the query's 75 nearest shared terms, not a cosine between two book vectors, which is why it can legitimately go negative and why the y-axis is never clamped at zero ([the backend documents the measurement](https://github.com/areebms/embedding-analytics/blob/main/docs/internals.md#what-the-score-measures)). The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
+Recharts line chart on a continuous **publication-year** x-axis, so books sit at their real distance in time rather than in evenly spaced rank order. Each line follows one term — the query itself, plus the terms used closest to it — and its height is that term's **definitional agreement**: how closely it keeps the same company in each book.
 
-A line that slopes as it moves right is a term keeping different company in later books than earlier ones.
+The value behind it is the backend's `mean_local_similarity` — the similarity of two books' profiles over the query's 75 nearest shared terms, centred so that the shared height of those 75 does not dominate, which is why it can legitimately go negative and why the y-axis is never clamped at zero. It is not a cosine between two book vectors; no such vector exists, because the books are never placed in a shared frame — the [backend repo](https://github.com/areebms/embedding-analytics) documents the measurement under *What the score measures*.
+
+Each point carries a shaded 95% confidence band. What that band varies depends on the request: with a book pinned it is the spread across the training-seed ensemble, and with none pinned it is the spread across the other books. The two are not comparable in width. The chart width follows its container, and it makes uncertainty visible rather than hiding it behind a single number.
+
+The change in agreement along a line is **definitional drift** — a term keeping different company in later books than earlier ones. That slope, rather than any single point, is what the chart is for, and it is what `/semantic-drift` is named after.
 
 
 ---

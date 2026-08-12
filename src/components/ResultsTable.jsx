@@ -14,16 +14,16 @@ import { buildDiachronicSeries, isDrawn } from "./DiachronicChart/series";
 import { QUERY_STROKE_W, NEIGHBOUR_STROKE_W } from "./DiachronicChart/layout";
 import { labels } from "../content/labels";
 
-export default function DriftTable({ payload, allBooks, sort }) {
+export default function ResultsTable({ payload, allBooks, ranking }) {
   const { series, roster } = useMemo(
-    () => buildDiachronicSeries(payload, allBooks, null, sort),
-    [payload, allBooks, sort],
+    () => buildDiachronicSeries(payload, allBooks, null, ranking),
+    [payload, allBooks, ranking],
   );
 
   if (!series.length) {
     return (
       <Typography variant="body2" color="text.secondary" sx={{ py: 2, px: 1 }}>
-        No drift data to tabulate yet.
+        Nothing to tabulate yet.
       </Typography>
     );
   }
@@ -39,10 +39,7 @@ export default function DriftTable({ payload, allBooks, sort }) {
               Expression
             </TableCell>
             <TableCell rowSpan={2} align="right" sx={{ ...HEAD, ...CELL }}>
-              <HelpLabel {...labels.columns.stability} />
-            </TableCell>
-            <TableCell rowSpan={2} align="right" sx={{ ...HEAD, ...CELL }}>
-              <HelpLabel {...labels.columns.instability} />
+              <HelpLabel {...labels.columns[ranking]} />
             </TableCell>
             <TableCell
               colSpan={roster.length}
@@ -67,13 +64,10 @@ export default function DriftTable({ payload, allBooks, sort }) {
             return (
               <TableRow key={s.term} hover>
                 <TableCell sx={CELL}>
-                  <TermCell series={s} />
+                  <TermCell series={s} ranking={ranking} />
                 </TableCell>
                 <TableCell align="right" sx={CELL}>
-                  <RankStatCell stats={s.stats} stat="stability" />
-                </TableCell>
-                <TableCell align="right" sx={CELL}>
-                  <RankStatCell stats={s.stats} stat="instability" />
+                  <RankStatCell stats={s.stats} stat={ranking} />
                 </TableCell>
                 {roster.map((b) => {
                   const p = byBook.get(b.id);
@@ -86,7 +80,6 @@ export default function DriftTable({ payload, allBooks, sort }) {
                         <GapText
                           cause={gap.cause}
                           missingTerms={gap.missingTerms}
-                          compact
                         />
                       ) : (
                         <Dash />
@@ -122,7 +115,12 @@ function SeriesSwatch({ color, isQuery }) {
   );
 }
 
-function TermCell({ series }) {
+// Only the sorted-on statistic gets a column, so the other one has nowhere else
+// to appear. It goes here rather than being dropped: the two are read against
+// each other -- a term can be stable and still be the one the books disagree
+// about -- and losing half that comparison to a dropdown toggle costs more than
+// a tooltip line.
+function TermCell({ series, ranking }) {
   const term = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <SeriesSwatch color={series.color} isQuery={series.isQuery} />
@@ -137,13 +135,14 @@ function TermCell({ series }) {
 
   if (!series.stats) return term;
 
-  const { n_books_in, stability, instability } = series.stats;
+  const { n_books_in } = series.stats;
+  const other = ranking === "stability" ? "instability" : "stability";
   return (
     <Tooltip
       title={
-        `Stability ${stability.toFixed(3)}, Instability ` +
-        `${instability.toFixed(3)}, across the ${n_books_in} ` +
-        `book${n_books_in === 1 ? "" : "s"} that use it.`
+        `${labels.columns[other].short} ` +
+        `${series.stats[other].toFixed(3)} · measured across the ` +
+        `${n_books_in} book${n_books_in === 1 ? "" : "s"} that use it.`
       }
     >
       <Box sx={{ cursor: "help", display: "inline-block" }}>{term}</Box>
@@ -163,22 +162,21 @@ function RankStatCell({ stats, stat }) {
 function MeasurementValue({ point }) {
   const value = (
     <Typography variant="body2" sx={NUM}>
-      {point.similarity.toFixed(3)}
+      {point.agreement.toFixed(3)}
     </Typography>
   );
   if (!point.measurement) return value;
 
-  const { similarity_ci, count, n_seeds } = point.measurement;
+  const { ci, occurrences, n_seeds } = point.measurement;
   return (
     <Tooltip
       title={
         <Box sx={{ fontVariantNumeric: "tabular-nums" }}>
           <div>
-            95% CI [{similarity_ci[0].toFixed(3)}, {similarity_ci[1].toFixed(3)}
-            ]
+            95% CI [{ci[0].toFixed(3)}, {ci[1].toFixed(3)}]
           </div>
           <div>
-            {count.toLocaleString()} uses · {n_seeds} seed
+            {occurrences.toLocaleString()} uses · {n_seeds} seed
             {n_seeds === 1 ? "" : "s"}
           </div>
         </Box>
@@ -189,12 +187,17 @@ function MeasurementValue({ point }) {
   );
 }
 
-function GapText({ cause, missingTerms, compact = false }) {
+function GapText({ cause, missingTerms }) {
   const copy = labels.gaps[cause];
   return (
-    <Tooltip title={copy.detail(missingTerms)}>
-      <Typography variant="body2" color="text.disabled" sx={{ cursor: "help" }}>
-        {compact ? "--" : copy.short}
+    <Tooltip title={`${copy.short} — ${copy.detail(missingTerms)}`}>
+      <Typography
+        variant="body2"
+        color="text.disabled"
+        sx={{ cursor: "help", borderBottom: "1px dotted currentColor" }}
+        component="span"
+      >
+        —
       </Typography>
     </Tooltip>
   );
@@ -215,7 +218,7 @@ function HelpLabel({ short, help }) {
 
 const Dash = () => (
   <Typography variant="body2" color="text.disabled">
-    --
+    —
   </Typography>
 );
 
